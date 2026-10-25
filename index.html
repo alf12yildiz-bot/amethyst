@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amethyst</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0614;--panel:#150d26;--card:#1f1438;--hover:#2d1d52;--line:#33245a;--text:#f5f0ff;--muted:#b3a6d6;--accent:#a97bff;--ink:#14082b}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;display:grid;grid-template-columns:320px 1fr 300px;grid-template-rows:60px 1fr 84px;gap:8px;padding:8px;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+#top{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 8px}
+#brand{font-family:Fraunces,serif;font-weight:800;font-size:24px;width:296px;display:flex;align-items:center;gap:8px}
+#brand::before{content:"";width:20px;height:20px;background:linear-gradient(135deg,#d9c2ff,#7a3df0);clip-path:polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)}
+#center{flex:1;display:flex;justify-content:center;align-items:center;gap:8px}
+#home{width:48px;height:48px;border-radius:50%;border:0;background:var(--card);font-size:22px}
+#q{width:min(460px,60%);height:48px;border-radius:999px;border:1px solid transparent;background:var(--card);padding:0 20px}
+#q:hover{border-color:var(--line)}
+#avatar{width:44px;height:44px;border-radius:50%;border:0;background:#7a3df0 center/cover;font-weight:600}
+#side,#main,#np{background:var(--panel);border-radius:12px;overflow:auto}
+#side{padding:16px}
+#side h2{font-size:16px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+#plbox{margin-bottom:16px}
+#main{padding:20px 24px;background:linear-gradient(180deg,#3b2377 0,var(--panel) 280px)}
+#np{padding:16px}
+.box{background:var(--card);border-radius:12px;padding:14px;margin-bottom:16px}
+input[type=text],input[type=email],input[type=password],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px}
+input[type=file]{margin-top:8px;max-width:100%;font-size:12px;color:var(--muted)}
+.lbl{font-size:12px;color:var(--muted);margin-top:8px;display:block}
+.btn{background:var(--accent);color:var(--ink);border:0;border-radius:999px;padding:10px 20px;font-weight:600;margin-top:12px}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);margin-right:6px}
+.msg{color:var(--muted);font-size:13px;margin-top:8px;min-height:16px}
+.msg.err{color:#ff8fb1}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.chip{border:0;border-radius:999px;padding:8px 16px;background:#ffffff1f}
+.chip.on{background:var(--text);color:var(--bg)}
+h1{font-size:26px;margin:8px 0 12px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{background:transparent;border:0;text-align:left;padding:12px;border-radius:8px}
+.card:hover,.card.on{background:var(--card)}
+.cov{aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#7a3df0,#d9c2ff) center/cover;display:flex;align-items:center;justify-content:center;font:800 40px Fraunces,serif;color:var(--ink)}
+.card .cov{margin-bottom:10px}
+.t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.on .t,.mrow.on .t{color:var(--accent)}
+.a{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow{display:flex;align-items:center;gap:10px;padding:6px;border-radius:8px}
+.mrow:hover,.mrow.on{background:var(--card)}
+.mrow .cov{width:44px;height:44px;font-size:18px;flex:none;cursor:pointer}
+.mrow .info{flex:1;min-width:0;cursor:pointer}
+.badge{border:1px solid var(--line);background:transparent;border-radius:999px;font-size:11px;padding:3px 9px}
+.badge.public{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+.del{background:none;border:0;color:var(--muted);font-size:12px}
+#np .cov{width:100%;font-size:90px;margin-bottom:16px}
+#np h2{margin:0;font-size:24px}
+#bar{grid-column:1/-1;display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:16px;padding:0 8px}
+#nowl{display:flex;align-items:center;gap:12px;min-width:0}
+#nowl .cov{width:56px;height:56px;font-size:22px;flex:none}
+#mid{display:flex;flex-direction:column;align-items:center;gap:6px}
+#ctl{display:flex;align-items:center;gap:14px}
+.ctl{background:none;border:0;font-size:18px;color:var(--muted);padding:4px 8px}
+.ctl:hover,.ctl.on{color:var(--accent)}
+#pp{background:var(--text);color:var(--bg);border-radius:50%;width:38px;height:38px;font-size:14px;padding:0}
+#seekrow{display:flex;align-items:center;gap:10px;width:100%;max-width:560px;font-size:12px;color:var(--muted)}
+#seek{flex:1}
+#seek,#vol{accent-color:var(--accent)}
+#vol{width:110px;justify-self:end}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:20px;width:min(380px,92vw)}
+dialog::backdrop{background:#000b}
+dialog h2{margin:0 0 8px}
+.cw{position:relative}
+.dots{position:absolute;top:18px;right:18px;border:0;border-radius:50%;width:30px;height:30px;background:#000a;color:#fff;opacity:0}
+.cw:hover .dots,.dots:focus-visible{opacity:1}
+@media (hover:none){.dots{opacity:.85}}
+#mbody h2{margin:0 0 4px}
+#mbody .btn{display:block;width:100%;margin:8px 0 0;text-align:left}
+@media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
+@media (max-width:760px){
+ body{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto}
+ #brand{width:auto}#main{min-height:60vh}
+ #bar{position:sticky;bottom:0;background:var(--bg);grid-template-columns:1fr;padding:8px}
+ #vol{display:none}
+}
+</style>
+</head>
+<body>
+<header id="top">
+  <div id="brand">Amethyst</div>
+  <div id="center">
+    <button id="home" aria-label="Ana sayfa">⌂</button>
+    <input id="q" type="search" placeholder="Ne çalmak istiyorsun?" aria-label="Ara">
+  </div>
+  <button id="avatar" class="hidden" aria-label="Profil"></button>
+</header>
+
+<aside id="side">
+  <div id="upbox" class="box hidden">
+    <h2>Şarkı yükle</h2>
+    <input type="text" id="title" placeholder="Şarkı adı">
+    <input type="text" id="artist" placeholder="Sanatçı">
+    <label class="lbl">Ses dosyası<input type="file" id="file" accept="audio/*"></label>
+    <label class="lbl">Kapak resmi (isteğe bağlı)<input type="file" id="cover" accept="image/*"></label>
+    <label class="lbl">Paylaşım
+      <select id="vis"><option value="public">Public (herkes görür)</option><option value="private">Private (sadece ben)</option></select>
+    </label>
+    <button class="btn" id="up">Yükle</button>
+    <div class="msg" id="upmsg"></div>
+  </div>
+  <div id="plbox" class="hidden">
+    <h2>Çalma listeleri <button class="badge" id="newpl">+ Yeni</button></h2>
+    <div id="pls"></div>
+    <div class="msg" id="plempty">Henüz çalma listen yok.</div>
+  </div>
+  <div id="minebox" class="hidden">
+    <h2>Kitaplığın</h2>
+    <div id="mine"></div>
+    <div class="msg" id="mineempty">Henüz şarkı yüklemedin.</div>
+  </div>
+</aside>
+
+<main id="main">
+  <section id="auth" class="box" style="max-width:420px;margin-top:40px">
+    <h1>Giriş yap</h1>
+    <input type="email" id="em" placeholder="E-posta" autocomplete="email">
+    <input type="password" id="pw" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+    <div style="margin-top:4px">
+      <button class="btn" id="login">Giriş yap</button>
+      <button class="btn ghost" id="signup">Hesap oluştur</button>
+      <button class="btn ghost" id="google">Google ile devam et</button>
+    </div>
+    <div class="msg" id="authmsg"></div>
+  </section>
+  <section id="app" class="hidden">
+    <div class="chips">
+      <button class="chip on" id="c-all">Tümü</button>
+      <button class="chip" id="c-mine">Benim şarkılarım</button>
+      <button class="chip" id="c-likes">♥ Sevilenler</button>
+      <button class="chip" id="c-fr">Arkadaşlar</button>
+    </div>
+    <div id="people" class="hidden"><h1>Hesaplar</h1><div id="plist"></div></div>
+    <h1 id="ttl">Herkese açık şarkılar</h1>
+    <div id="grid"></div>
+    <div class="msg" id="empty">Şarkı bulunamadı.</div>
+  </section>
+</main>
+
+<aside id="np">
+  <div class="cov" id="npc">♪</div>
+  <h2 id="npt">Bir şarkı seç</h2>
+  <div class="a" id="npa"></div>
+</aside>
+
+<footer id="bar">
+  <div id="nowl"><div class="cov" id="bc">♪</div><div style="min-width:0"><div class="t" id="bt">Çalan şarkı yok</div><div class="a" id="ba"></div></div></div>
+  <div id="mid">
+    <div id="ctl">
+      <button class="ctl" id="shuf" aria-label="Karıştır">⤮</button>
+      <button class="ctl" id="prev" aria-label="Önceki">⏮</button>
+      <button class="ctl" id="pp" aria-label="Oynat veya duraklat">▶</button>
+      <button class="ctl" id="next" aria-label="Sonraki">⏭</button>
+      <button class="ctl" id="rep" aria-label="Tekrarla">⟲</button>
+    </div>
+    <div id="seekrow"><span id="t1">0:00</span><input type="range" id="seek" min="0" max="100" value="0" aria-label="İlerleme"><span id="t2">0:00</span></div>
+  </div>
+  <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" aria-label="Ses">
+</footer>
+<audio id="audio" preload="none"></audio>
+
+<dialog id="smenu"><div id="mbody"></div><button class="btn ghost" id="mclose" style="margin-top:12px">Kapat</button></dialog>
+
+<dialog id="prof">
+  <h2>Profil</h2>
+  <input type="text" id="pname" placeholder="Görünen ad">
+  <label class="lbl">Profil resmi<input type="file" id="pfile" accept="image/*"></label>
+  <div class="msg" id="pmsg"></div>
+  <button class="btn" id="psave">Kaydet</button>
+  <button class="btn ghost" id="pclose" style="margin-left:6px">Kapat</button>
+  <button class="btn ghost" id="out">Çıkış yap</button>
+</dialog>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, arrayUnion, arrayRemove, doc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDOgyYp9XpgLDur2vgnwB5F7t5nOq0EVGE",
+  authDomain: "amethyst-2b7ac.firebaseapp.com",
+  projectId: "amethyst-2b7ac",
+  storageBucket: "amethyst-2b7ac.firebasestorage.app",
+  messagingSenderId: "580085133398",
+  appId: "1:580085133398:web:a67b235f1b8c00dbd20bf7"
+};
+const CLOUD_NAME = "h1yxfuyt";
+const UPLOAD_PRESET = "amethyst";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app), db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const audio = $("audio");
+let pub = [], mine = [], unsubs = [], view = [], queue = [], curId = null, chip = "all", shuffle = false;
+let likes = new Set(), friends = new Set(), pls = [], people = [], menuId = null, ptimer;
+
+const fmt = s => isFinite(s) ? Math.floor(s/60) + ":" + String(Math.floor(s%60)).padStart(2,"0") : "0:00";
+const say = (id, text, err) => { const e = $(id); e.textContent = text; e.classList.toggle("err", !!err); };
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const setCover = (n, s) => { if (s && s.cover) { n.style.backgroundImage = `url("${s.cover}")`; n.textContent = ""; } else { n.style.backgroundImage = ""; n.textContent = s ? (s.title || "♪")[0].toUpperCase() : "♪"; } };
+const all = () => { const m = new Map(); [...pub, ...mine].forEach(s => m.set(s.id, s)); return [...m.values()].sort((a, b) => (b.createdAt?.seconds ?? 1e12) - (a.createdAt?.seconds ?? 1e12)); };
+
+const cloud = (file, kind, onp) => new Promise((ok, no) => {
+  const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
+  const x = new XMLHttpRequest();
+  x.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${kind}/upload`);
+  x.upload.onprogress = e => { if (e.lengthComputable && onp) onp(e.loaded / e.total); };
+  x.onerror = () => no(new Error("Bağlantı hatası"));
+  x.onload = () => { let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {} x.status === 200 && r.secure_url ? ok(r) : no(new Error(r.error?.message || x.status)); };
+  x.send(fd);
+});
+
+/* ---------- Auth ---------- */
+const authErr = e => say("authmsg", e.message.replace("Firebase: ", ""), true);
+$("login").onclick = () => signInWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
+$("signup").onclick = () => createUserWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
+$("google").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(authErr);
+$("out").onclick = () => { $("prof").close(); signOut(auth); };
+
+function renderAvatar() {
+  const u = auth.currentUser, a = $("avatar");
+  a.style.backgroundImage = u.photoURL ? `url("${u.photoURL}")` : "";
+  a.textContent = u.photoURL ? "" : (u.displayName || u.email || "?")[0].toUpperCase();
+}
+const subErr = e => say("empty", "Şarkılar yüklenemedi: " + e.message, true);
+onAuthStateChanged(auth, user => {
+  ["app", "upbox", "minebox", "plbox", "avatar"].forEach(i => $(i).classList.toggle("hidden", !user));
+  $("auth").classList.toggle("hidden", !!user);
+  unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = [];
+  if (user) {
+    renderAvatar(); saveUser();
+    const take = (set) => snap => { set(snap.docs.map(d => ({ id: d.id, ...d.data() }))); renderAll(); };
+    unsubs.push(onSnapshot(query(collection(db, "songs"), where("visibility", "==", "public")), take(v => pub = v), subErr));
+    unsubs.push(onSnapshot(query(collection(db, "songs"), where("uid", "==", user.uid)), take(v => mine = v), subErr));
+    const me = user.uid;
+    unsubs.push(onSnapshot(query(collection(db, "likes"), where("uid", "==", me)), q => { likes = new Set(q.docs.map(d => d.data().songId)); renderAll(); }, subErr));
+    unsubs.push(onSnapshot(query(collection(db, "friends"), where("a", "==", me)), q => { friends = new Set(q.docs.map(d => d.data().b)); renderAll(); }, subErr));
+    unsubs.push(onSnapshot(query(collection(db, "playlists"), where("uid", "==", me)), q => { pls = q.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, subErr));
+  } else { audio.pause(); curId = null; renderAll(); }
+});
+
+/* ---------- Profile ---------- */
+$("avatar").onclick = () => { $("pname").value = auth.currentUser.displayName || ""; $("pfile").value = ""; say("pmsg", ""); $("prof").showModal(); };
+$("pclose").onclick = () => $("prof").close();
+$("psave").onclick = async () => {
+  try {
+    const f = $("pfile").files[0], d = { displayName: $("pname").value.trim() };
+    if (f) { say("pmsg", "Resim yükleniyor…"); d.photoURL = (await cloud(f, "image")).secure_url; }
+    await updateProfile(auth.currentUser, d); renderAvatar(); saveUser(); $("prof").close();
+  } catch (e) { say("pmsg", "Hata: " + e.message, true); }
+};
+
+/* ---------- Upload ---------- */
+$("up").onclick = async () => {
+  const f = $("file").files[0], c = $("cover").files[0], u = auth.currentUser;
+  if (!f) return say("upmsg", "Önce bir ses dosyası seç.", true);
+  if (!f.type.startsWith("audio/")) return say("upmsg", "Bu dosya ses dosyası değil.", true);
+  if (f.size > 20 * 1024 * 1024) return say("upmsg", "Dosya 20 MB'dan büyük.", true);
+  if (c && !c.type.startsWith("image/")) return say("upmsg", "Kapak bir resim olmalı.", true);
+  const title = $("title").value.trim() || f.name.replace(/\.[^.]+$/, "");
+  const artist = $("artist").value.trim() || "Bilinmeyen sanatçı";
+  $("up").disabled = true;
+  try {
+    let cover = "";
+    if (c) { say("upmsg", "Kapak yükleniyor…"); cover = (await cloud(c, "image")).secure_url; }
+    const r = await cloud(f, "video", p => say("upmsg", "Yükleniyor… " + Math.round(p * 100) + "%"));
+    await addDoc(collection(db, "songs"), { title, artist, cover, url: r.secure_url, path: r.public_id, visibility: $("vis").value, by: myName(), uid: u.uid, createdAt: serverTimestamp() });
+    say("upmsg", "Yüklendi: " + title);
+    ["title", "artist", "file", "cover"].forEach(i => $(i).value = "");
+  } catch (e) { say("upmsg", "Hata: " + e.message, true); }
+  $("up").disabled = false;
+};
+
+/* ---------- Render ---------- */
+function renderAll() { renderMain(); renderSide(); renderPls(); renderPeople(); renderNP(); if ($("smenu").open) renderMenu(); }
+function renderMain() {
+  const term = $("q").value.trim().toLowerCase(), uid = auth.currentUser?.uid;
+  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", fr: "Arkadaşların şarkıları" };
+  const pl = pls.find(x => "pl:" + x.id === chip);
+  $("ttl").textContent = pl ? pl.name : T[chip] || "Şarkılar";
+  const inChip = s => chip === "all" ? (s.visibility === "public" || s.uid === uid) : chip === "mine" ? s.uid === uid : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
+  view = all().filter(s => inChip(s) && (!term || (s.title + " " + s.artist).toLowerCase().includes(term)));
+  const g = $("grid"); g.innerHTML = "";
+  $("empty").classList.toggle("hidden", view.length > 0);
+  view.forEach(s => {
+    const b = el("button", "card" + (s.id === curId ? " on" : ""));
+    const cv = el("div", "cov"); setCover(cv, s);
+    b.append(cv, el("div", "t", s.title), el("div", "a", s.artist), el("div", "a", "@" + (s.by || "bilinmiyor")));
+    b.onclick = () => playId(s.id, view);
+    const w = el("div", "cw"), m = el("button", "dots", "⋯"); m.setAttribute("aria-label", "Şarkı menüsü"); m.onclick = () => openMenu(s.id);
+    w.append(b, m); g.append(w);
+  });
+}
+function renderSide() {
+  const l = $("mine"); l.innerHTML = "";
+  const list = all().filter(s => s.uid === auth.currentUser?.uid);
+  $("mineempty").classList.toggle("hidden", list.length > 0);
+  list.forEach(s => {
+    const r = el("div", "mrow" + (s.id === curId ? " on" : ""));
+    const cv = el("div", "cov"); setCover(cv, s);
+    const info = el("div", "info"); info.append(el("div", "t", s.title), el("div", "a", s.artist));
+    cv.onclick = info.onclick = () => playId(s.id, list);
+    const isPub = s.visibility === "public";
+    const bd = el("button", "badge" + (isPub ? " public" : ""), isPub ? "Public" : "Private");
+    bd.title = "Paylaşım durumunu değiştir";
+    bd.onclick = () => updateDoc(doc(db, "songs", s.id), { visibility: isPub ? "private" : "public" }).catch(e => say("upmsg", "Hata: " + e.message, true));
+    const del = el("button", "del", "Sil");
+    del.onclick = () => { if (confirm(`"${s.title}" silinsin mi?`)) deleteDoc(doc(db, "songs", s.id)).catch(e => say("upmsg", "Silinemedi: " + e.message, true)); };
+    r.append(cv, info, bd, del); l.append(r);
+  });
+}
+function renderNP() {
+  const s = all().find(x => x.id === curId);
+  setCover($("npc"), s); setCover($("bc"), s);
+  $("npt").textContent = $("bt").textContent = s ? s.title : "Çalan şarkı yok";
+  $("npa").textContent = $("ba").textContent = s ? s.artist + " · @" + (s.by || "bilinmiyor") : "";
+}
+$("q").oninput = () => { renderMain(); findPeople(); };
+function setChip(c) { chip = c; ["all", "mine", "likes", "fr"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
+$("home").onclick = () => { $("q").value = ""; findPeople(); setChip("all"); };
+["all", "mine", "likes", "fr"].forEach(k => $("c-" + k).onclick = () => setChip(k));
+
+/* ---------- Social: accounts, friends, likes, playlists ---------- */
+const fail = e => say("upmsg", "Hata: " + e.message, true);
+const myName = () => { const u = auth.currentUser; return u.displayName || (u.email || "kullanici").split("@")[0]; };
+const saveUser = () => { const u = auth.currentUser, n = myName(); setDoc(doc(db, "users", u.uid), { name: n, nameLower: n.toLowerCase(), photo: u.photoURL || "" }, { merge: true }).catch(fail); };
+function findPeople() {
+  clearTimeout(ptimer);
+  ptimer = setTimeout(async () => {
+    const t = $("q").value.trim().toLowerCase();
+    if (t.length < 2 || !auth.currentUser) { people = []; return renderPeople(); }
+    try {
+      const r = await getDocs(query(collection(db, "users"), where("nameLower", ">=", t), where("nameLower", "<=", t + "\uf8ff")));
+      people = r.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== auth.currentUser.uid).slice(0, 8);
+    } catch (e) { people = []; }
+    renderPeople();
+  }, 300);
+}
+function renderPeople() {
+  const box = $("plist"); box.innerHTML = ""; $("people").classList.toggle("hidden", !people.length);
+  people.forEach(x => {
+    const r = el("div", "mrow"), cv = el("div", "cov"); setCover(cv, { cover: x.photo, title: x.name });
+    const info = el("div", "info"); info.append(el("div", "t", x.name), el("div", "a", "@" + x.name));
+    const f = friends.has(x.id), b = el("button", "badge" + (f ? " public" : ""), f ? "Arkadaşın ✓" : "Arkadaş ekle");
+    b.onclick = () => toggleFriend(x.id); r.append(cv, info, b); box.append(r);
+  });
+}
+function toggleFriend(id) { const me = auth.currentUser.uid, r = doc(db, "friends", me + "_" + id); (friends.has(id) ? deleteDoc(r) : setDoc(r, { a: me, b: id })).catch(fail); }
+function toggleLike(id) { const me = auth.currentUser.uid, r = doc(db, "likes", me + "_" + id); (likes.has(id) ? deleteDoc(r) : setDoc(r, { uid: me, songId: id })).catch(fail); }
+$("newpl").onclick = () => { const n = (prompt("Çalma listesi adı:") || "").trim(); if (n) addDoc(collection(db, "playlists"), { uid: auth.currentUser.uid, name: n, songIds: [] }).catch(fail); };
+function renderPls() {
+  const l = $("pls"); l.innerHTML = ""; $("plempty").classList.toggle("hidden", pls.length > 0);
+  pls.forEach(p => {
+    const r = el("div", "mrow" + (chip === "pl:" + p.id ? " on" : "")), info = el("div", "info");
+    info.append(el("div", "t", p.name), el("div", "a", (p.songIds || []).length + " şarkı"));
+    info.onclick = () => setChip("pl:" + p.id);
+    const del = el("button", "del", "Sil");
+    del.onclick = () => { if (confirm(`"${p.name}" silinsin mi?`)) { if (chip === "pl:" + p.id) setChip("all"); deleteDoc(doc(db, "playlists", p.id)).catch(fail); } };
+    r.append(info, del); l.append(r);
+  });
+}
+function openMenu(id) { menuId = id; renderMenu(); $("smenu").showModal(); }
+$("mclose").onclick = () => $("smenu").close();
+function renderMenu() {
+  const s = all().find(x => x.id === menuId), b = $("mbody"); b.innerHTML = ""; if (!s) return;
+  const me = auth.currentUser.uid, by = s.by || "bilinmiyor";
+  b.append(el("h2", null, s.title), el("div", "a", s.artist + " · @" + by));
+  const mk = (t, f) => { const x = el("button", "btn ghost", t); x.onclick = f; b.append(x); };
+  mk(likes.has(s.id) ? "♥ Sevilenlerden çıkar" : "♡ Sevilenlere ekle", () => toggleLike(s.id));
+  if (s.uid !== me) mk(friends.has(s.uid) ? "Arkadaşlıktan çıkar: @" + by : "Arkadaş ekle: @" + by, () => toggleFriend(s.uid));
+  b.append(el("div", "lbl", "Çalma listesine ekle"));
+  if (!pls.length) b.append(el("div", "msg", "Önce soldan bir çalma listesi oluştur."));
+  pls.forEach(p => { const has = (p.songIds || []).includes(s.id); mk((has ? "✓ " : "+ ") + p.name, () => updateDoc(doc(db, "playlists", p.id), { songIds: has ? arrayRemove(s.id) : arrayUnion(s.id) }).catch(fail)); });
+}
+
+/* ---------- Player ---------- */
+function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; audio.src = s.url; audio.play().catch(() => {}); renderAll(); }
+function step(d) {
+  if (!queue.length) return;
+  let i = queue.findIndex(x => x.id === curId);
+  i = shuffle && d > 0 ? Math.floor(Math.random() * queue.length) : (i + d + queue.length) % queue.length;
+  playId(queue[i].id, queue);
+}
+$("pp").onclick = () => { if (!curId) return view.length && playId(view[0].id, view); audio.paused ? audio.play() : audio.pause(); };
+$("prev").onclick = () => step(-1);
+$("next").onclick = () => step(1);
+$("shuf").onclick = e => { shuffle = !shuffle; e.currentTarget.classList.toggle("on", shuffle); };
+$("rep").onclick = e => { audio.loop = !audio.loop; e.currentTarget.classList.toggle("on", audio.loop); };
+$("vol").oninput = e => audio.volume = e.target.value;
+audio.volume = 0.8;
+$("seek").oninput = e => { if (isFinite(audio.duration)) audio.currentTime = e.target.value / 100 * audio.duration; };
+audio.ontimeupdate = () => { if (isFinite(audio.duration)) $("seek").value = audio.currentTime / audio.duration * 100; $("t1").textContent = fmt(audio.currentTime); $("t2").textContent = fmt(audio.duration); };
+audio.onplay = audio.onpause = () => { $("pp").textContent = audio.paused ? "▶" : "❚❚"; };
+audio.onended = () => step(1);
+</script>
+</body>
+</html>
