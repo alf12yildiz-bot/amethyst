@@ -80,6 +80,12 @@ dialog h2{margin:0 0 8px}
 @media (hover:none){.dots{opacity:.85}}
 #mbody h2{margin:0 0 4px}
 #mbody .btn{display:block;width:100%;margin:8px 0 0;text-align:left}
+#ytp{position:fixed;right:16px;bottom:100px;width:300px;aspect-ratio:16/9;z-index:5;background:#000;border-radius:10px;overflow:hidden}
+#ytp iframe{width:100%;height:100%}
+#ytx{position:absolute;top:4px;right:4px;z-index:6;border:0;border-radius:50%;width:26px;height:26px;background:#000a;color:#fff}
+.row2{display:flex;gap:8px}.row2 .btn{margin-top:8px}
+#pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
+@media (max-width:760px){#ytp{bottom:150px;width:240px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
 @media (max-width:760px){
  body{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto}
@@ -142,9 +148,12 @@ dialog h2{margin:0 0 8px}
       <button class="chip" id="c-mine">Benim şarkılarım</button>
       <button class="chip" id="c-likes">♥ Sevilenler</button>
       <button class="chip" id="c-fr">Arkadaşlar</button>
+      <button class="chip" id="c-users">Kullanıcılar</button>
+      <button class="chip" id="c-yt">▶ YouTube</button>
     </div>
     <div id="people" class="hidden"><h1>Hesaplar</h1><div id="plist"></div></div>
-    <h1 id="ttl">Herkese açık şarkılar</h1>
+    <div id="ytbox" class="hidden"><div class="row2"><input type="text" id="ytq" placeholder="YouTube'da şarkı ara"><button class="btn" id="ytgo">Ara</button></div><div class="msg" id="ytmsg"></div><div id="ytres"></div></div>
+    <h1 id="ttl">Herkese açık şarkılar</h1><button class="btn hidden" id="pfr"></button>
     <div id="grid"></div>
     <div class="msg" id="empty">Şarkı bulunamadı.</div>
   </section>
@@ -170,6 +179,7 @@ dialog h2{margin:0 0 8px}
   </div>
   <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" aria-label="Ses">
 </footer>
+<div id="ytp" class="hidden"><button id="ytx" aria-label="Kapat">✕</button><div id="ytf"></div></div>
 <audio id="audio" preload="none"></audio>
 
 <dialog id="smenu"><div id="mbody"></div><button class="btn ghost" id="mclose" style="margin-top:12px">Kapat</button></dialog>
@@ -187,7 +197,7 @@ dialog h2{margin:0 0 8px}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, arrayUnion, arrayRemove, doc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, arrayUnion, arrayRemove, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDOgyYp9XpgLDur2vgnwB5F7t5nOq0EVGE",
@@ -199,6 +209,7 @@ const firebaseConfig = {
 };
 const CLOUD_NAME = "h1yxfuyt";
 const UPLOAD_PRESET = "amethyst";
+const YT_KEY = "AIzaSyCtvb9YuLlizM-54GT99mMWrqafihNkr3M";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app), db = getFirestore(app);
@@ -206,12 +217,13 @@ const $ = id => document.getElementById(id);
 const audio = $("audio");
 let pub = [], mine = [], unsubs = [], view = [], queue = [], curId = null, chip = "all", shuffle = false;
 let likes = new Set(), friends = new Set(), pls = [], people = [], menuId = null, ptimer;
+let ytSaved = [], usersAll = [], profile = null, tmpSong = null, yp = null, ytOn = false, ytPending = null;
 
 const fmt = s => isFinite(s) ? Math.floor(s/60) + ":" + String(Math.floor(s%60)).padStart(2,"0") : "0:00";
 const say = (id, text, err) => { const e = $(id); e.textContent = text; e.classList.toggle("err", !!err); };
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const setCover = (n, s) => { if (s && s.cover) { n.style.backgroundImage = `url("${s.cover}")`; n.textContent = ""; } else { n.style.backgroundImage = ""; n.textContent = s ? (s.title || "♪")[0].toUpperCase() : "♪"; } };
-const all = () => { const m = new Map(); [...pub, ...mine].forEach(s => m.set(s.id, s)); return [...m.values()].sort((a, b) => (b.createdAt?.seconds ?? 1e12) - (a.createdAt?.seconds ?? 1e12)); };
+const all = () => { const m = new Map(); [...pub, ...mine, ...ytSaved].forEach(s => m.set(s.id, s)); return [...m.values()].sort((a, b) => (b.createdAt?.seconds ?? 1e12) - (a.createdAt?.seconds ?? 1e12)); };
 
 const cloud = (file, kind, onp) => new Promise((ok, no) => {
   const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
@@ -239,7 +251,7 @@ const subErr = e => say("empty", "Şarkılar yüklenemedi: " + e.message, true);
 onAuthStateChanged(auth, user => {
   ["app", "upbox", "minebox", "plbox", "avatar"].forEach(i => $(i).classList.toggle("hidden", !user));
   $("auth").classList.toggle("hidden", !!user);
-  unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = [];
+  unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = []; ytSaved = [];
   if (user) {
     renderAvatar(); saveUser();
     const take = (set) => snap => { set(snap.docs.map(d => ({ id: d.id, ...d.data() }))); renderAll(); };
@@ -249,6 +261,7 @@ onAuthStateChanged(auth, user => {
     unsubs.push(onSnapshot(query(collection(db, "likes"), where("uid", "==", me)), q => { likes = new Set(q.docs.map(d => d.data().songId)); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "friends"), where("a", "==", me)), q => { friends = new Set(q.docs.map(d => d.data().b)); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "playlists"), where("uid", "==", me)), q => { pls = q.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, subErr));
+    unsubs.push(onSnapshot(query(collection(db, "ytsaved"), where("uid", "==", me)), q => { ytSaved = q.docs.map(d => { const x = d.data(); return { id: "yt:" + x.videoId, yt: x.videoId, title: x.title, artist: x.channel, cover: x.thumb, by: "YouTube", uid: me, visibility: "private", createdAt: x.createdAt }; }); renderAll(); }, subErr));
   } else { audio.pause(); curId = null; renderAll(); }
 });
 
@@ -288,13 +301,16 @@ $("up").onclick = async () => {
 function renderAll() { renderMain(); renderSide(); renderPls(); renderPeople(); renderNP(); if ($("smenu").open) renderMenu(); }
 function renderMain() {
   const term = $("q").value.trim().toLowerCase(), uid = auth.currentUser?.uid;
-  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", fr: "Arkadaşların şarkıları" };
+  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", users: "Kullanıcılar", yt: "YouTube", fr: "Arkadaşların şarkıları" };
   const pl = pls.find(x => "pl:" + x.id === chip);
-  $("ttl").textContent = pl ? pl.name : T[chip] || "Şarkılar";
-  const inChip = s => chip === "all" ? (s.visibility === "public" || s.uid === uid) : chip === "mine" ? s.uid === uid : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
+  $("ttl").textContent = pl ? pl.name : profile ? "@" + profile.name : T[chip] || "Şarkılar";
+  const inChip = s => chip === "users" || chip === "yt" ? false : profile ? (s.uid === profile.id && s.visibility === "public") : chip === "all" ? (!s.yt && (s.visibility === "public" || s.uid === uid)) : chip === "mine" ? (!s.yt && s.uid === uid) : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
   view = all().filter(s => inChip(s) && (!term || (s.title + " " + s.artist).toLowerCase().includes(term)));
   const g = $("grid"); g.innerHTML = "";
-  $("empty").classList.toggle("hidden", view.length > 0);
+  $("empty").classList.toggle("hidden", view.length > 0 || chip === "users" || chip === "yt");
+  $("ytbox").classList.toggle("hidden", chip !== "yt"); g.classList.toggle("hidden", chip === "users" || chip === "yt");
+  const pf = $("pfr"); pf.classList.toggle("hidden", !profile || profile.id === uid);
+  if (profile) { pf.textContent = friends.has(profile.id) ? "Arkadaşın ✓" : "Arkadaş ekle"; pf.onclick = () => toggleFriend(profile.id); }
   view.forEach(s => {
     const b = el("button", "card" + (s.id === curId ? " on" : ""));
     const cv = el("div", "cov"); setCover(cv, s);
@@ -306,7 +322,7 @@ function renderMain() {
 }
 function renderSide() {
   const l = $("mine"); l.innerHTML = "";
-  const list = all().filter(s => s.uid === auth.currentUser?.uid);
+  const list = all().filter(s => s.uid === auth.currentUser?.uid && !s.yt);
   $("mineempty").classList.toggle("hidden", list.length > 0);
   list.forEach(s => {
     const r = el("div", "mrow" + (s.id === curId ? " on" : ""));
@@ -323,15 +339,15 @@ function renderSide() {
   });
 }
 function renderNP() {
-  const s = all().find(x => x.id === curId);
+  const s = all().find(x => x.id === curId) || (tmpSong && tmpSong.id === curId ? tmpSong : null);
   setCover($("npc"), s); setCover($("bc"), s);
   $("npt").textContent = $("bt").textContent = s ? s.title : "Çalan şarkı yok";
   $("npa").textContent = $("ba").textContent = s ? s.artist + " · @" + (s.by || "bilinmiyor") : "";
 }
 $("q").oninput = () => { renderMain(); findPeople(); };
-function setChip(c) { chip = c; ["all", "mine", "likes", "fr"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
+function setChip(c) { if (!c.startsWith("u:")) profile = null; if (c === "users") loadUsers(); chip = c; ["all", "mine", "likes", "fr", "users", "yt"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
 $("home").onclick = () => { $("q").value = ""; findPeople(); setChip("all"); };
-["all", "mine", "likes", "fr"].forEach(k => $("c-" + k).onclick = () => setChip(k));
+["all", "mine", "likes", "fr", "users", "yt"].forEach(k => $("c-" + k).onclick = () => setChip(k));
 
 /* ---------- Social: accounts, friends, likes, playlists ---------- */
 const fail = e => say("upmsg", "Hata: " + e.message, true);
@@ -350,10 +366,11 @@ function findPeople() {
   }, 300);
 }
 function renderPeople() {
-  const box = $("plist"); box.innerHTML = ""; $("people").classList.toggle("hidden", !people.length);
-  people.forEach(x => {
+  const list = chip === "users" ? usersAll : chip === "yt" ? [] : people;
+  const box = $("plist"); box.innerHTML = ""; $("people").classList.toggle("hidden", !list.length);
+  list.forEach(x => {
     const r = el("div", "mrow"), cv = el("div", "cov"); setCover(cv, { cover: x.photo, title: x.name });
-    const info = el("div", "info"); info.append(el("div", "t", x.name), el("div", "a", "@" + x.name));
+    const info = el("div", "info"); info.append(el("div", "t", x.name), el("div", "a", "@" + x.name)); info.onclick = () => openProfile(x);
     const f = friends.has(x.id), b = el("button", "badge" + (f ? " public" : ""), f ? "Arkadaşın ✓" : "Arkadaş ekle");
     b.onclick = () => toggleFriend(x.id); r.append(cv, info, b); box.append(r);
   });
@@ -375,26 +392,69 @@ function renderPls() {
 function openMenu(id) { menuId = id; renderMenu(); $("smenu").showModal(); }
 $("mclose").onclick = () => $("smenu").close();
 function renderMenu() {
-  const s = all().find(x => x.id === menuId), b = $("mbody"); b.innerHTML = ""; if (!s) return;
+  const s = all().find(x => x.id === menuId) || (tmpSong && tmpSong.id === menuId ? tmpSong : null), b = $("mbody"); b.innerHTML = ""; if (!s) return;
   const me = auth.currentUser.uid, by = s.by || "bilinmiyor";
   b.append(el("h2", null, s.title), el("div", "a", s.artist + " · @" + by));
   const mk = (t, f) => { const x = el("button", "btn ghost", t); x.onclick = f; b.append(x); };
-  mk(likes.has(s.id) ? "♥ Sevilenlerden çıkar" : "♡ Sevilenlere ekle", () => toggleLike(s.id));
+  mk(likes.has(s.id) ? "♥ Sevilenlerden çıkar" : "♡ Sevilenlere ekle", () => ensure(s).then(() => toggleLike(s.id)).catch(fail));
+  if (s.uid !== me && !s.yt) mk("Profilini aç: @" + by, () => { $("smenu").close(); openProfile({ id: s.uid, name: by }); });
   if (s.uid !== me) mk(friends.has(s.uid) ? "Arkadaşlıktan çıkar: @" + by : "Arkadaş ekle: @" + by, () => toggleFriend(s.uid));
   b.append(el("div", "lbl", "Çalma listesine ekle"));
   if (!pls.length) b.append(el("div", "msg", "Önce soldan bir çalma listesi oluştur."));
-  pls.forEach(p => { const has = (p.songIds || []).includes(s.id); mk((has ? "✓ " : "+ ") + p.name, () => updateDoc(doc(db, "playlists", p.id), { songIds: has ? arrayRemove(s.id) : arrayUnion(s.id) }).catch(fail)); });
+  pls.forEach(p => { const has = (p.songIds || []).includes(s.id); mk((has ? "✓ " : "+ ") + p.name, () => ensure(s).then(() => updateDoc(doc(db, "playlists", p.id), { songIds: has ? arrayRemove(s.id) : arrayUnion(s.id) })).catch(fail)); });
 }
 
+/* ---------- Users & YouTube ---------- */
+async function loadUsers() {
+  try { const r = await getDocs(query(collection(db, "users"), limit(60))); usersAll = r.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== auth.currentUser.uid); } catch (e) { fail(e); }
+  renderPeople();
+}
+function openProfile(x) { profile = { id: x.id, name: x.name || "kullanıcı" }; $("q").value = ""; people = []; setChip("u:" + x.id); }
+const dec = h => { const t = document.createElement("textarea"); t.innerHTML = h; return t.value; };
+const ensure = s => (s.yt && !ytSaved.some(x => x.id === s.id)) ? setDoc(doc(db, "ytsaved", auth.currentUser.uid + "_" + s.yt), { uid: auth.currentUser.uid, videoId: s.yt, title: s.title, channel: s.artist, thumb: s.cover, createdAt: serverTimestamp() }) : Promise.resolve();
+async function ytSearch() {
+  const t = $("ytq").value.trim(); if (!t) return;
+  if (YT_KEY.startsWith("YOUR_")) return say("ytmsg", "index.html içine YouTube API anahtarını ekle.", true);
+  say("ytmsg", "Aranıyor…");
+  try {
+    const r = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=" + encodeURIComponent(t) + "&key=" + YT_KEY), j = await r.json();
+    if (!r.ok) throw new Error(j.error?.message || r.status);
+    say("ytmsg", j.items.length ? "" : "Sonuç yok.");
+    renderYt(j.items.map(i => ({ id: "yt:" + i.id.videoId, yt: i.id.videoId, title: dec(i.snippet.title), artist: dec(i.snippet.channelTitle), cover: i.snippet.thumbnails.medium.url, by: "YouTube" })));
+  } catch (e) { say("ytmsg", "Hata: " + e.message, true); }
+}
+function renderYt(items) {
+  const box = $("ytres"); box.innerHTML = "";
+  items.forEach(s => {
+    const r = el("div", "mrow"), cv = el("div", "cov"), info = el("div", "info"); setCover(cv, s);
+    info.append(el("div", "t", s.title), el("div", "a", s.artist));
+    const pl = el("button", "badge", "▶ Çal"), ad = el("button", "badge public", "+ Ekle");
+    pl.onclick = () => { tmpSong = s; queue = [s]; curId = s.id; playYt(s); renderAll(); };
+    ad.onclick = () => { tmpSong = s; openMenu(s.id); };
+    r.append(cv, info, pl, ad); box.append(r);
+  });
+}
+$("ytgo").onclick = ytSearch; $("ytq").onkeydown = e => { if (e.key === "Enter") ytSearch(); };
+$("ytx").onclick = () => { if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); };
+function playYt(s) {
+  audio.pause(); ytOn = true; ytPending = s.yt; $("ytp").classList.remove("hidden");
+  if (yp && yp.loadVideoById) return yp.loadVideoById(s.yt);
+  if (window.YT && YT.Player) return initYt();
+  window.onYouTubeIframeAPIReady = initYt;
+  if (!document.getElementById("ytapi")) { const t = document.createElement("script"); t.id = "ytapi"; t.src = "https://www.youtube.com/iframe_api"; document.head.append(t); }
+}
+function initYt() { yp = new YT.Player("ytf", { videoId: ytPending, playerVars: { autoplay: 1, playsinline: 1 }, events: { onStateChange: e => { $("pp").textContent = e.data === 1 ? "❚❚" : "▶"; if (e.data === 0) step(1); } } }); }
+
 /* ---------- Player ---------- */
-function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; audio.src = s.url; audio.play().catch(() => {}); renderAll(); }
+function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); audio.src = s.url; audio.play().catch(() => {}); } renderAll(); }
 function step(d) {
   if (!queue.length) return;
   let i = queue.findIndex(x => x.id === curId);
   i = shuffle && d > 0 ? Math.floor(Math.random() * queue.length) : (i + d + queue.length) % queue.length;
   playId(queue[i].id, queue);
 }
-$("pp").onclick = () => { if (!curId) return view.length && playId(view[0].id, view); audio.paused ? audio.play() : audio.pause(); };
+$("pp").onclick = () => { if (!curId) return view.length && playId(view[0].id, view);
+  if (ytOn && yp && yp.getPlayerState) return yp.getPlayerState() === 1 ? yp.pauseVideo() : yp.playVideo(); audio.paused ? audio.play() : audio.pause(); };
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
 $("shuf").onclick = e => { shuffle = !shuffle; e.currentTarget.classList.toggle("on", shuffle); };
