@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0b0614;--panel:#150d26;--card:#1f1438;--hover:#2d1d52;--line:#33245a;--text:#f5f0ff;--muted:#b3a6d6;--accent:#a97bff;--ink:#14082b}
-*{box-sizing:border-box}
+*{box-sizing:border-box;scrollbar-color:#4b3a7a transparent}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;display:grid;grid-template-columns:320px 1fr 300px;grid-template-rows:60px 1fr 84px;gap:8px;padding:8px;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
@@ -27,7 +27,7 @@ button{cursor:pointer}
 #side{padding:16px}
 #side h2{font-size:16px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
 #plbox{margin-bottom:16px}
-#main{padding:20px 24px;background:linear-gradient(180deg,#3b2377 0,var(--panel) 280px)}
+#main{overflow-x:hidden;padding:20px 24px;background:linear-gradient(180deg,#3b2377 0,var(--panel) 280px)}
 #np{padding:16px}
 .box{background:var(--card);border-radius:12px;padding:14px;margin-bottom:16px}
 input[type=text],input[type=email],input[type=password],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px}
@@ -43,10 +43,11 @@ input[type=file]{margin-top:8px;max-width:100%;font-size:12px;color:var(--muted)
 .chip.on{background:var(--text);color:var(--bg)}
 h1{font-size:26px;margin:8px 0 12px}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.card{background:transparent;border:0;text-align:left;padding:12px;border-radius:8px}
+.card{display:block;width:100%;background:transparent;border:0;text-align:left;padding:12px;border-radius:8px}
 .card:hover,.card.on{background:var(--card)}
 .cov{aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#7a3df0,#d9c2ff) center/cover;display:flex;align-items:center;justify-content:center;font:800 40px Fraunces,serif;color:var(--ink)}
-.card .cov{margin-bottom:10px}
+.card .cov{width:100%;height:auto;aspect-ratio:auto;padding:50% 0;line-height:0;margin-bottom:10px}
+.cw,.card{min-width:0}
 .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card.on .t,.mrow.on .t{color:var(--accent)}
 .a{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -80,12 +81,12 @@ dialog h2{margin:0 0 8px}
 @media (hover:none){.dots{opacity:.85}}
 #mbody h2{margin:0 0 4px}
 #mbody .btn{display:block;width:100%;margin:8px 0 0;text-align:left}
-#ytp{position:fixed;right:16px;bottom:100px;width:300px;aspect-ratio:16/9;z-index:5;background:#000;border-radius:10px;overflow:hidden}
+#ytp{position:fixed;right:16px;bottom:100px;width:356px;height:200px;z-index:5;background:#000;border-radius:10px;overflow:hidden}
 #ytp iframe{width:100%;height:100%}
 #ytx{position:absolute;top:4px;right:4px;z-index:6;border:0;border-radius:50%;width:26px;height:26px;background:#000a;color:#fff}
 .row2{display:flex;gap:8px}.row2 .btn{margin-top:8px}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
-@media (max-width:760px){#ytp{bottom:150px;width:240px}}
+@media (max-width:760px){#ytp{bottom:150px;width:300px;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
 @media (max-width:760px){
  body{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto}
@@ -443,7 +444,7 @@ function playYt(s) {
   window.onYouTubeIframeAPIReady = initYt;
   if (!document.getElementById("ytapi")) { const t = document.createElement("script"); t.id = "ytapi"; t.src = "https://www.youtube.com/iframe_api"; document.head.append(t); }
 }
-function initYt() { yp = new YT.Player("ytf", { videoId: ytPending, playerVars: { autoplay: 1, playsinline: 1 }, events: { onStateChange: e => { $("pp").textContent = e.data === 1 ? "❚❚" : "▶"; if (e.data === 0) step(1); } } }); }
+function initYt() { yp = new YT.Player("ytf", { videoId: ytPending, playerVars: { autoplay: 1, playsinline: 1 }, events: { onReady: e => e.target.setVolume($("vol").value * 100), onStateChange: e => { $("pp").textContent = e.data === 1 ? "❚❚" : "▶"; if (e.data === 0) { if (audio.loop) { yp.seekTo(0); yp.playVideo(); } else step(1); } } } }); }
 
 /* ---------- Player ---------- */
 function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); audio.src = s.url; audio.play().catch(() => {}); } renderAll(); }
@@ -459,12 +460,13 @@ $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
 $("shuf").onclick = e => { shuffle = !shuffle; e.currentTarget.classList.toggle("on", shuffle); };
 $("rep").onclick = e => { audio.loop = !audio.loop; e.currentTarget.classList.toggle("on", audio.loop); };
-$("vol").oninput = e => audio.volume = e.target.value;
+$("vol").oninput = e => { audio.volume = e.target.value; if (yp && yp.setVolume) yp.setVolume(e.target.value * 100); };
 audio.volume = 0.8;
-$("seek").oninput = e => { if (isFinite(audio.duration)) audio.currentTime = e.target.value / 100 * audio.duration; };
+$("seek").oninput = e => { if (ytOn && yp && yp.getDuration) return yp.seekTo(e.target.value / 100 * yp.getDuration(), true); if (isFinite(audio.duration)) audio.currentTime = e.target.value / 100 * audio.duration; };
 audio.ontimeupdate = () => { if (isFinite(audio.duration)) $("seek").value = audio.currentTime / audio.duration * 100; $("t1").textContent = fmt(audio.currentTime); $("t2").textContent = fmt(audio.duration); };
 audio.onplay = audio.onpause = () => { $("pp").textContent = audio.paused ? "▶" : "❚❚"; };
 audio.onended = () => step(1);
+setInterval(() => { if (!ytOn || !yp || !yp.getDuration) return; const d = yp.getDuration(), c = yp.getCurrentTime(); if (d > 0) { $("seek").value = c / d * 100; $("t1").textContent = fmt(c); $("t2").textContent = fmt(d); } }, 500);
 </script>
 </body>
 </html>
