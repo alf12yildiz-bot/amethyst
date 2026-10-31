@@ -26,7 +26,7 @@ button{cursor:pointer}
 #side,#main,#np{background:var(--panel);border-radius:12px;overflow:auto}
 #side{padding:16px}
 #side h2{font-size:16px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
-#plbox{margin-bottom:16px}
+#plbox,#invbox{margin-bottom:16px}
 #main{overflow-x:hidden;padding:20px 24px;background:linear-gradient(180deg,#3b2377 0,var(--panel) 280px)}
 #np{padding:16px}
 .box{background:var(--card);border-radius:12px;padding:14px;margin-bottom:16px}
@@ -75,6 +75,8 @@ h1{font-size:26px;margin:8px 0 12px}
 dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:20px;width:min(380px,92vw)}
 dialog::backdrop{background:#000b}
 dialog h2{margin:0 0 8px}
+#ask .row3{display:flex;gap:8px}#ask .btn{margin-top:12px}
+input[type=file]::file-selector-button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:6px 14px;margin-right:10px;cursor:pointer;font:inherit}
 .cw{position:relative}
 .dots{position:absolute;top:18px;right:18px;border:0;border-radius:50%;width:30px;height:30px;background:#000a;color:#fff;opacity:0}
 .cw:hover .dots,.dots:focus-visible{opacity:1}
@@ -118,6 +120,11 @@ dialog h2{margin:0 0 8px}
     </label>
     <button class="btn" id="up">Yükle</button>
     <div class="msg" id="upmsg"></div>
+  </div>
+  <div id="invbox" class="hidden">
+    <h2>Arkadaşlar <button class="badge" id="invlink">Davet linki</button></h2>
+    <div id="invs"></div>
+    <div class="msg" id="invmsg"></div>
   </div>
   <div id="plbox" class="hidden">
     <h2>Çalma listeleri <button class="badge" id="newpl">+ Yeni</button></h2>
@@ -183,6 +190,7 @@ dialog h2{margin:0 0 8px}
 <div id="ytp" class="hidden"><button id="ytx" aria-label="Kapat">✕</button><div id="ytf"></div></div>
 <audio id="audio" preload="none"></audio>
 
+<dialog id="ask"><h2 id="ask-t"></h2><input type="text" id="ask-i" class="hidden"><div class="row3"><button class="btn" id="ask-ok">Tamam</button><button class="btn ghost" id="ask-no">İptal</button></div></dialog>
 <dialog id="smenu"><div id="mbody"></div><button class="btn ghost" id="mclose" style="margin-top:12px">Kapat</button></dialog>
 
 <dialog id="prof">
@@ -217,7 +225,7 @@ const auth = getAuth(app), db = getFirestore(app);
 const $ = id => document.getElementById(id);
 const audio = $("audio");
 let pub = [], mine = [], unsubs = [], view = [], queue = [], curId = null, chip = "all", shuffle = false;
-let likes = new Set(), friends = new Set(), pls = [], people = [], menuId = null, ptimer;
+let likes = new Set(), friends = new Set(), pls = [], people = [], menuId = null, ptimer, inv = [], outg = new Set();
 let ytSaved = [], usersAll = [], profile = null, tmpSong = null, yp = null, ytOn = false, ytPending = null;
 
 const fmt = s => isFinite(s) ? Math.floor(s/60) + ":" + String(Math.floor(s%60)).padStart(2,"0") : "0:00";
@@ -250,9 +258,9 @@ function renderAvatar() {
 }
 const subErr = e => say("empty", "Şarkılar yüklenemedi: " + e.message, true);
 onAuthStateChanged(auth, user => {
-  ["app", "upbox", "minebox", "plbox", "avatar"].forEach(i => $(i).classList.toggle("hidden", !user));
+  ["app", "upbox", "minebox", "plbox", "invbox", "avatar"].forEach(i => $(i).classList.toggle("hidden", !user));
   $("auth").classList.toggle("hidden", !!user);
-  unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = []; ytSaved = [];
+  unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = []; ytSaved = []; inv = []; outg = new Set();
   if (user) {
     renderAvatar(); saveUser();
     const take = (set) => snap => { set(snap.docs.map(d => ({ id: d.id, ...d.data() }))); renderAll(); };
@@ -261,6 +269,8 @@ onAuthStateChanged(auth, user => {
     const me = user.uid;
     unsubs.push(onSnapshot(query(collection(db, "likes"), where("uid", "==", me)), q => { likes = new Set(q.docs.map(d => d.data().songId)); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "friends"), where("a", "==", me)), q => { friends = new Set(q.docs.map(d => d.data().b)); renderAll(); }, subErr));
+    unsubs.push(onSnapshot(query(collection(db, "invites"), where("to", "==", me)), q => { inv = q.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, subErr));
+    unsubs.push(onSnapshot(query(collection(db, "invites"), where("from", "==", me)), q => { outg = new Set(q.docs.map(d => d.data().to)); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "playlists"), where("uid", "==", me)), q => { pls = q.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "ytsaved"), where("uid", "==", me)), q => { ytSaved = q.docs.map(d => { const x = d.data(); return { id: "yt:" + x.videoId, yt: x.videoId, title: x.title, artist: x.channel, cover: x.thumb, by: "YouTube", uid: me, visibility: "private", createdAt: x.createdAt }; }); renderAll(); }, subErr));
   } else { audio.pause(); curId = null; renderAll(); }
@@ -299,7 +309,7 @@ $("up").onclick = async () => {
 };
 
 /* ---------- Render ---------- */
-function renderAll() { renderMain(); renderSide(); renderPls(); renderPeople(); renderNP(); if ($("smenu").open) renderMenu(); }
+function renderAll() { renderMain(); renderSide(); renderInv(); renderPls(); renderPeople(); renderNP(); if ($("smenu").open) renderMenu(); }
 function renderMain() {
   const term = $("q").value.trim().toLowerCase(), uid = auth.currentUser?.uid;
   const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", users: "Kullanıcılar", yt: "YouTube", fr: "Arkadaşların şarkıları" };
@@ -311,7 +321,7 @@ function renderMain() {
   $("empty").classList.toggle("hidden", view.length > 0 || chip === "users" || chip === "yt");
   $("ytbox").classList.toggle("hidden", chip !== "yt"); g.classList.toggle("hidden", chip === "users" || chip === "yt");
   const pf = $("pfr"); pf.classList.toggle("hidden", !profile || profile.id === uid);
-  if (profile) { pf.textContent = friends.has(profile.id) ? "Arkadaşın ✓" : "Arkadaş ekle"; pf.onclick = () => toggleFriend(profile.id); }
+  if (profile) { pf.textContent = friendText(profile.id); pf.onclick = () => toggleFriend(profile.id, profile.name); }
   view.forEach(s => {
     const b = el("button", "card" + (s.id === curId ? " on" : ""));
     const cv = el("div", "cov"); setCover(cv, s);
@@ -335,7 +345,7 @@ function renderSide() {
     bd.title = "Paylaşım durumunu değiştir";
     bd.onclick = () => updateDoc(doc(db, "songs", s.id), { visibility: isPub ? "private" : "public" }).catch(e => say("upmsg", "Hata: " + e.message, true));
     const del = el("button", "del", "Sil");
-    del.onclick = () => { if (confirm(`"${s.title}" silinsin mi?`)) deleteDoc(doc(db, "songs", s.id)).catch(e => say("upmsg", "Silinemedi: " + e.message, true)); };
+    del.onclick = async () => { if (await ask(`"${s.title}" silinsin mi?`, { ok: "Sil" })) deleteDoc(doc(db, "songs", s.id)).catch(e => say("upmsg", "Silinemedi: " + e.message, true)); };
     r.append(cv, info, bd, del); l.append(r);
   });
 }
@@ -349,6 +359,19 @@ $("q").oninput = () => { renderMain(); findPeople(); };
 function setChip(c) { if (!c.startsWith("u:")) profile = null; if (c === "users") loadUsers(); chip = c; ["all", "mine", "likes", "fr", "users", "yt"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
 $("home").onclick = () => { $("q").value = ""; findPeople(); setChip("all"); };
 ["all", "mine", "likes", "fr", "users", "yt"].forEach(k => $("c-" + k).onclick = () => setChip(k));
+
+function ask(title, o = {}) {
+  return new Promise(res => {
+    const d = $("ask"), i = $("ask-i"), inp = !!o.input;
+    $("ask-t").textContent = title; i.classList.toggle("hidden", !inp); i.value = ""; i.placeholder = o.ph || ""; $("ask-ok").textContent = o.ok || "Tamam";
+    const done = v => { d.close(); res(v); };
+    $("ask-ok").onclick = () => done(inp ? i.value.trim() : true);
+    $("ask-no").onclick = () => done(inp ? null : false);
+    d.oncancel = e => { e.preventDefault(); done(inp ? null : false); };
+    i.onkeydown = e => { if (e.key === "Enter") $("ask-ok").click(); };
+    d.showModal(); if (inp) i.focus();
+  });
+}
 
 /* ---------- Social: accounts, friends, likes, playlists ---------- */
 const fail = e => say("upmsg", "Hata: " + e.message, true);
@@ -372,13 +395,51 @@ function renderPeople() {
   list.forEach(x => {
     const r = el("div", "mrow"), cv = el("div", "cov"); setCover(cv, { cover: x.photo, title: x.name });
     const info = el("div", "info"); info.append(el("div", "t", x.name), el("div", "a", "@" + x.name)); info.onclick = () => openProfile(x);
-    const f = friends.has(x.id), b = el("button", "badge" + (f ? " public" : ""), f ? "Arkadaşın ✓" : "Arkadaş ekle");
-    b.onclick = () => toggleFriend(x.id); r.append(cv, info, b); box.append(r);
+    const f = friends.has(x.id), b = el("button", "badge" + (f ? " public" : ""), friendText(x.id));
+    b.onclick = () => toggleFriend(x.id, x.name); r.append(cv, info, b); box.append(r);
   });
 }
-function toggleFriend(id) { const me = auth.currentUser.uid, r = doc(db, "friends", me + "_" + id); (friends.has(id) ? deleteDoc(r) : setDoc(r, { a: me, b: id })).catch(fail); }
+const friendText = id => friends.has(id) ? "Arkadaşın ✓" : outg.has(id) ? "Davet gönderildi" : inv.some(i => i.from === id) ? "Daveti kabul et" : "Arkadaş ekle";
+const friendAct = id => friends.has(id) ? "Arkadaşlıktan çıkar" : outg.has(id) ? "Daveti geri al" : inv.some(i => i.from === id) ? "Daveti kabul et" : "Arkadaşlık daveti gönder";
+async function acceptInvite(i) {
+  const me = auth.currentUser.uid;
+  await setDoc(doc(db, "friends", me + "_" + i.from), { a: me, b: i.from });
+  await setDoc(doc(db, "friends", i.from + "_" + me), { a: i.from, b: me });
+  await deleteDoc(doc(db, "invites", i.id));
+}
+async function toggleFriend(id, name) {
+  const me = auth.currentUser.uid;
+  try {
+    if (friends.has(id)) {
+      if (await ask(`@${name || "kullanıcı"} arkadaşlıktan çıkarılsın mı?`, { ok: "Çıkar" })) {
+        await deleteDoc(doc(db, "friends", me + "_" + id));
+        await deleteDoc(doc(db, "friends", id + "_" + me)).catch(() => {});
+      }
+    } else if (outg.has(id)) await deleteDoc(doc(db, "invites", me + "_" + id));
+    else if (inv.some(i => i.from === id)) await acceptInvite(inv.find(i => i.from === id));
+    else await setDoc(doc(db, "invites", me + "_" + id), { from: me, to: id, fromName: myName(), createdAt: serverTimestamp() });
+  } catch (e) { fail(e); }
+}
+function renderInv() {
+  const l = $("invs"); l.innerHTML = "";
+  inv.forEach(i => {
+    const r = el("div", "mrow"), info = el("div", "info");
+    info.append(el("div", "t", "@" + (i.fromName || "kullanıcı")), el("div", "a", "arkadaşlık daveti gönderdi"));
+    const ok = el("button", "badge public", "Kabul"), no = el("button", "badge", "Reddet");
+    ok.onclick = () => acceptInvite(i).catch(fail);
+    no.onclick = () => deleteDoc(doc(db, "invites", i.id)).catch(fail);
+    r.append(info, ok, no); l.append(r);
+  });
+}
+$("invlink").onclick = async () => {
+  const url = location.origin + location.pathname;
+  try {
+    if (navigator.share) { await navigator.share({ title: "Amethyst", text: "Amethyst'te birlikte müzik dinleyelim!", url }); return; }
+    await navigator.clipboard.writeText(url); say("invmsg", "Davet linki kopyalandı.");
+  } catch (e) { if (e.name !== "AbortError") say("invmsg", url); }
+};
 function toggleLike(id) { const me = auth.currentUser.uid, r = doc(db, "likes", me + "_" + id); (likes.has(id) ? deleteDoc(r) : setDoc(r, { uid: me, songId: id })).catch(fail); }
-$("newpl").onclick = () => { const n = (prompt("Çalma listesi adı:") || "").trim(); if (n) addDoc(collection(db, "playlists"), { uid: auth.currentUser.uid, name: n, songIds: [] }).catch(fail); };
+$("newpl").onclick = async () => { const n = await ask("Yeni çalma listesi", { input: true, ph: "Çalma listesi adı", ok: "Oluştur" }); if (n) addDoc(collection(db, "playlists"), { uid: auth.currentUser.uid, name: n, songIds: [] }).catch(fail); };
 function renderPls() {
   const l = $("pls"); l.innerHTML = ""; $("plempty").classList.toggle("hidden", pls.length > 0);
   pls.forEach(p => {
@@ -386,7 +447,7 @@ function renderPls() {
     info.append(el("div", "t", p.name), el("div", "a", (p.songIds || []).length + " şarkı"));
     info.onclick = () => setChip("pl:" + p.id);
     const del = el("button", "del", "Sil");
-    del.onclick = () => { if (confirm(`"${p.name}" silinsin mi?`)) { if (chip === "pl:" + p.id) setChip("all"); deleteDoc(doc(db, "playlists", p.id)).catch(fail); } };
+    del.onclick = async () => { if (await ask(`"${p.name}" silinsin mi?`, { ok: "Sil" })) { if (chip === "pl:" + p.id) setChip("all"); deleteDoc(doc(db, "playlists", p.id)).catch(fail); } };
     r.append(info, del); l.append(r);
   });
 }
@@ -399,7 +460,7 @@ function renderMenu() {
   const mk = (t, f) => { const x = el("button", "btn ghost", t); x.onclick = f; b.append(x); };
   mk(likes.has(s.id) ? "♥ Sevilenlerden çıkar" : "♡ Sevilenlere ekle", () => ensure(s).then(() => toggleLike(s.id)).catch(fail));
   if (s.uid !== me && !s.yt) mk("Profilini aç: @" + by, () => { $("smenu").close(); openProfile({ id: s.uid, name: by }); });
-  if (s.uid !== me) mk(friends.has(s.uid) ? "Arkadaşlıktan çıkar: @" + by : "Arkadaş ekle: @" + by, () => toggleFriend(s.uid));
+  if (s.uid !== me) mk(friendAct(s.uid) + ": @" + by, () => toggleFriend(s.uid, by));
   b.append(el("div", "lbl", "Çalma listesine ekle"));
   if (!pls.length) b.append(el("div", "msg", "Önce soldan bir çalma listesi oluştur."));
   pls.forEach(p => { const has = (p.songIds || []).includes(s.id); mk((has ? "✓ " : "+ ") + p.name, () => ensure(s).then(() => updateDoc(doc(db, "playlists", p.id), { songIds: has ? arrayRemove(s.id) : arrayUnion(s.id) })).catch(fail)); });
@@ -447,7 +508,18 @@ function playYt(s) {
 function initYt() { yp = new YT.Player("ytf", { videoId: ytPending, playerVars: { autoplay: 1, playsinline: 1 }, events: { onReady: e => e.target.setVolume($("vol").value * 100), onStateChange: e => { $("pp").textContent = e.data === 1 ? "❚❚" : "▶"; if (e.data === 0) { if (audio.loop) { yp.seekTo(0); yp.playVideo(); } else step(1); } } } }); }
 
 /* ---------- Player ---------- */
-function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); audio.src = s.url; audio.play().catch(() => {}); } renderAll(); }
+/* Lock-screen / notification controls and background playback hints */
+function setMedia(s) {
+  if (!("mediaSession" in navigator) || typeof MediaMetadata === "undefined") return;
+  navigator.mediaSession.metadata = new MediaMetadata({ title: s.title, artist: s.artist, artwork: s.cover ? [{ src: s.cover, sizes: "512x512" }] : [] });
+}
+if ("mediaSession" in navigator) {
+  const ms = navigator.mediaSession, h = (n, f) => { try { ms.setActionHandler(n, f); } catch (e) {} };
+  h("play", () => audio.play()); h("pause", () => audio.pause());
+  h("previoustrack", () => step(-1)); h("nexttrack", () => step(1));
+  h("seekto", e => { audio.currentTime = e.seekTime; });
+}
+function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); audio.src = s.url; audio.play().catch(() => {}); setMedia(s); } renderAll(); }
 function step(d) {
   if (!queue.length) return;
   let i = queue.findIndex(x => x.id === curId);
