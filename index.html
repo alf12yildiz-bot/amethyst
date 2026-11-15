@@ -3,16 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0614">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Amethyst</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0614;--panel:#150d26;--card:#1f1438;--hover:#2d1d52;--line:#33245a;--text:#f5f0ff;--muted:#b3a6d6;--accent:#a97bff;--ink:#14082b}
-*{box-sizing:border-box;scrollbar-color:#4b3a7a transparent}
+:root{color-scheme:dark;--g1:#3b2377;--bg:#0b0614;--panel:#150d26;--card:#1f1438;--hover:#2d1d52;--line:#33245a;--text:#f5f0ff;--muted:#b3a6d6;--accent:#a97bff;--ink:#14082b}
+*{box-sizing:border-box;scrollbar-color:#4b3a7a transparent;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;display:grid;grid-template-columns:320px 1fr 300px;grid-template-rows:60px 1fr 84px;gap:8px;padding:8px;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
-button{cursor:pointer}
+button{cursor:pointer;touch-action:manipulation}
+button:focus:not(:focus-visible),input:focus:not(:focus-visible),select:focus:not(:focus-visible){outline:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hidden{display:none!important}
 #top{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 8px}
@@ -27,7 +32,7 @@ button{cursor:pointer}
 #side{padding:16px}
 #side h2{font-size:16px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
 #plbox,#invbox{margin-bottom:16px}
-#main{overflow-x:hidden;padding:20px 24px;background:linear-gradient(180deg,#3b2377 0,var(--panel) 280px)}
+#main{overflow-x:hidden;padding:20px 24px;background:linear-gradient(180deg,var(--g1) 0,var(--panel) 280px)}
 #np{padding:16px}
 .box{background:var(--card);border-radius:12px;padding:14px;margin-bottom:16px}
 input[type=text],input[type=email],input[type=password],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px}
@@ -85,10 +90,15 @@ input[type=file]::file-selector-button{background:var(--card);color:var(--text);
 #mbody .btn{display:block;width:100%;margin:8px 0 0;text-align:left}
 #ytp{position:fixed;right:16px;bottom:100px;width:356px;height:200px;z-index:5;background:#000;border-radius:10px;overflow:hidden}
 #ytp iframe{width:100%;height:100%}
+@media (min-width:1101px){#ytp{top:92px;bottom:auto;right:24px;width:268px;height:200px}body.yt #npc{display:none}body.yt #np{padding-top:232px}}
 #ytx{position:absolute;top:4px;right:4px;z-index:6;border:0;border-radius:50%;width:26px;height:26px;background:#000a;color:#fff}
 .row2{display:flex;gap:8px}.row2 .btn{margin-top:8px}
+.note{background:#ffffff14;border-left:3px solid var(--accent);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.sub{font:600 18px Fraunces,serif;margin:16px 0 8px}
+.wrap{white-space:normal!important}
+input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;flex:none}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
-@media (max-width:760px){#ytp{bottom:150px;width:300px;height:200px}}
+@media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
 @media (max-width:760px){
  body{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto}
@@ -118,6 +128,7 @@ input[type=file]::file-selector-button{background:var(--card);color:var(--text);
     <label class="lbl">Paylaşım
       <select id="vis"><option value="public">Public (herkes görür)</option><option value="private">Private (sadece ben)</option></select>
     </label>
+    <label class="lbl" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="rights"><span>Bu şarkıyı yükleme hakkım olduğunu onaylıyorum (kendi eserim ya da lisansı uygun).</span></label>
     <button class="btn" id="up">Yükle</button>
     <div class="msg" id="upmsg"></div>
   </div>
@@ -158,9 +169,13 @@ input[type=file]::file-selector-button{background:var(--card);color:var(--text);
       <button class="chip" id="c-fr">Arkadaşlar</button>
       <button class="chip" id="c-users">Kullanıcılar</button>
       <button class="chip" id="c-yt">▶ YouTube</button>
+      <button class="chip" id="c-jm">♫ Ücretsiz müzik</button>
+      <button class="chip hidden" id="c-mod">🛡 Moderasyon</button>
     </div>
     <div id="people" class="hidden"><h1>Hesaplar</h1><div id="plist"></div></div>
-    <div id="ytbox" class="hidden"><div class="row2"><input type="text" id="ytq" placeholder="YouTube'da şarkı ara"><button class="btn" id="ytgo">Ara</button></div><div class="msg" id="ytmsg"></div><div id="ytres"></div></div>
+    <div id="ytbox" class="hidden"><div class="note">⚠ Yasal sebeplerden dolayı YouTube müzikleri arka planda çalışmayacaktır.</div><div class="row2"><input type="text" id="ytq" placeholder="YouTube'da şarkı ara"><button class="btn" id="ytgo">Ara</button></div><div class="msg" id="ytmsg"></div><div id="ytres"></div></div>
+    <div id="modbox" class="hidden"><div class="note">Moderasyon paneli: sadece yöneticiler görür.</div><div class="sub">Açık şikayetler</div><div id="modrep"></div><div class="msg" id="modempty">Açık şikayet yok.</div><div class="sub">Gizlenen şarkılar</div><div id="modhid"></div></div>
+    <div id="jmbox" class="hidden"><div class="note">Openverse üzerinden bulunan Creative Commons lisanslı müzikler (Jamendo, Wikimedia gibi kaynaklardan). Bu şarkılar arka planda da çalar.</div><div class="row2"><input type="text" id="jmq" placeholder="Ücretsiz müzik ara"><button class="btn" id="jmgo">Ara</button></div><div class="msg" id="jmmsg"></div><div id="jmres"></div></div>
     <h1 id="ttl">Herkese açık şarkılar</h1><button class="btn hidden" id="pfr"></button>
     <div id="grid"></div>
     <div class="msg" id="empty">Şarkı bulunamadı.</div>
@@ -197,6 +212,7 @@ input[type=file]::file-selector-button{background:var(--card);color:var(--text);
   <h2>Profil</h2>
   <input type="text" id="pname" placeholder="Görünen ad">
   <label class="lbl">Profil resmi<input type="file" id="pfile" accept="image/*"></label>
+  <label class="lbl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="themeauto"> Çalan müziğe göre tema</label>
   <div class="msg" id="pmsg"></div>
   <button class="btn" id="psave">Kaydet</button>
   <button class="btn ghost" id="pclose" style="margin-left:6px">Kapat</button>
@@ -206,7 +222,7 @@ input[type=file]::file-selector-button{background:var(--card);color:var(--text);
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, arrayUnion, arrayRemove, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, getDoc, arrayUnion, arrayRemove, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDOgyYp9XpgLDur2vgnwB5F7t5nOq0EVGE",
@@ -226,6 +242,7 @@ const $ = id => document.getElementById(id);
 const audio = $("audio");
 let pub = [], mine = [], unsubs = [], view = [], queue = [], curId = null, chip = "all", shuffle = false;
 let likes = new Set(), friends = new Set(), pls = [], people = [], menuId = null, ptimer, inv = [], outg = new Set();
+let isAdmin = false, reports = [], hiddenSongs = [];
 let ytSaved = [], usersAll = [], profile = null, tmpSong = null, yp = null, ytOn = false, ytPending = null;
 
 const fmt = s => isFinite(s) ? Math.floor(s/60) + ":" + String(Math.floor(s%60)).padStart(2,"0") : "0:00";
@@ -272,12 +289,20 @@ onAuthStateChanged(auth, user => {
     unsubs.push(onSnapshot(query(collection(db, "invites"), where("to", "==", me)), q => { inv = q.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "invites"), where("from", "==", me)), q => { outg = new Set(q.docs.map(d => d.data().to)); renderAll(); }, subErr));
     unsubs.push(onSnapshot(query(collection(db, "playlists"), where("uid", "==", me)), q => { pls = q.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, subErr));
-    unsubs.push(onSnapshot(query(collection(db, "ytsaved"), where("uid", "==", me)), q => { ytSaved = q.docs.map(d => { const x = d.data(); return { id: "yt:" + x.videoId, yt: x.videoId, title: x.title, artist: x.channel, cover: x.thumb, by: "YouTube", uid: me, visibility: "private", createdAt: x.createdAt }; }); renderAll(); }, subErr));
-  } else { audio.pause(); curId = null; renderAll(); }
+    unsubs.push(onSnapshot(query(collection(db, "ytsaved"), where("uid", "==", me)), q => { ytSaved = q.docs.map(d => { const x = d.data(); if (x.src === "jamendo") return { id: "jm:" + x.videoId, jm: x.videoId, ext: true, url: x.url, title: x.title, artist: x.channel, cover: x.thumb, by: x.by || "Openverse", uid: me, visibility: "private", createdAt: x.createdAt };
+      return { id: "yt:" + x.videoId, yt: x.videoId, ext: true, title: x.title, artist: x.channel, cover: x.thumb, by: "YouTube", uid: me, visibility: "private", createdAt: x.createdAt }; }); renderAll(); }, subErr));
+    getDoc(doc(db, "admins", me)).then(d => {
+      if (!d.exists() || !auth.currentUser || auth.currentUser.uid !== me) return;
+      isAdmin = true;
+      unsubs.push(onSnapshot(query(collection(db, "reports"), where("status", "==", "open")), q => { reports = q.docs.map(x => ({ id: x.id, ...x.data() })); renderAll(); }, subErr));
+      unsubs.push(onSnapshot(query(collection(db, "songs"), where("visibility", "==", "hidden")), q => { hiddenSongs = q.docs.map(x => ({ id: x.id, ...x.data() })); renderAll(); }, subErr));
+      renderAll();
+    }).catch(() => {});
+  } else { audio.pause(); curId = null; isAdmin = false; reports = []; hiddenSongs = []; renderAll(); }
 });
 
 /* ---------- Profile ---------- */
-$("avatar").onclick = () => { $("pname").value = auth.currentUser.displayName || ""; $("pfile").value = ""; say("pmsg", ""); $("prof").showModal(); };
+$("avatar").onclick = () => { $("pname").value = auth.currentUser.displayName || ""; $("pfile").value = ""; $("themeauto").checked = themeOn; say("pmsg", ""); $("prof").showModal(); };
 $("pclose").onclick = () => $("prof").close();
 $("psave").onclick = async () => {
   try {
@@ -291,6 +316,7 @@ $("psave").onclick = async () => {
 $("up").onclick = async () => {
   const f = $("file").files[0], c = $("cover").files[0], u = auth.currentUser;
   if (!f) return say("upmsg", "Önce bir ses dosyası seç.", true);
+  if (!$("rights").checked) return say("upmsg", "Yükleme hakkını onaylamalısın.", true);
   if (!f.type.startsWith("audio/")) return say("upmsg", "Bu dosya ses dosyası değil.", true);
   if (f.size > 20 * 1024 * 1024) return say("upmsg", "Dosya 20 MB'dan büyük.", true);
   if (c && !c.type.startsWith("image/")) return say("upmsg", "Kapak bir resim olmalı.", true);
@@ -303,23 +329,23 @@ $("up").onclick = async () => {
     const r = await cloud(f, "video", p => say("upmsg", "Yükleniyor… " + Math.round(p * 100) + "%"));
     await addDoc(collection(db, "songs"), { title, artist, cover, url: r.secure_url, path: r.public_id, visibility: $("vis").value, by: myName(), uid: u.uid, createdAt: serverTimestamp() });
     say("upmsg", "Yüklendi: " + title);
-    ["title", "artist", "file", "cover"].forEach(i => $(i).value = "");
+    ["title", "artist", "file", "cover"].forEach(i => $(i).value = ""); $("rights").checked = false;
   } catch (e) { say("upmsg", "Hata: " + e.message, true); }
   $("up").disabled = false;
 };
 
 /* ---------- Render ---------- */
-function renderAll() { renderMain(); renderSide(); renderInv(); renderPls(); renderPeople(); renderNP(); if ($("smenu").open) renderMenu(); }
+function renderAll() { renderMain(); renderSide(); renderInv(); renderPls(); renderPeople(); renderNP(); renderMod(); if ($("smenu").open) renderMenu(); }
 function renderMain() {
   const term = $("q").value.trim().toLowerCase(), uid = auth.currentUser?.uid;
-  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", users: "Kullanıcılar", yt: "YouTube", fr: "Arkadaşların şarkıları" };
+  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", users: "Kullanıcılar", yt: "YouTube", jm: "Ücretsiz müzik", mod: "Moderasyon", fr: "Arkadaşların şarkıları" };
   const pl = pls.find(x => "pl:" + x.id === chip);
   $("ttl").textContent = pl ? pl.name : profile ? "@" + profile.name : T[chip] || "Şarkılar";
-  const inChip = s => chip === "users" || chip === "yt" ? false : profile ? (s.uid === profile.id && s.visibility === "public") : chip === "all" ? (!s.yt && (s.visibility === "public" || s.uid === uid)) : chip === "mine" ? (!s.yt && s.uid === uid) : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
+  const inChip = s => ["users", "yt", "jm", "mod"].includes(chip) ? false : profile ? (s.uid === profile.id && s.visibility === "public") : chip === "all" ? (!s.ext && (s.visibility === "public" || s.uid === uid)) : chip === "mine" ? (!s.ext && s.uid === uid) : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
   view = all().filter(s => inChip(s) && (!term || (s.title + " " + s.artist).toLowerCase().includes(term)));
   const g = $("grid"); g.innerHTML = "";
-  $("empty").classList.toggle("hidden", view.length > 0 || chip === "users" || chip === "yt");
-  $("ytbox").classList.toggle("hidden", chip !== "yt"); g.classList.toggle("hidden", chip === "users" || chip === "yt");
+  $("empty").classList.toggle("hidden", view.length > 0 || ["users", "yt", "jm", "mod"].includes(chip));
+  $("ytbox").classList.toggle("hidden", chip !== "yt"); $("jmbox").classList.toggle("hidden", chip !== "jm"); g.classList.toggle("hidden", ["users", "yt", "jm", "mod"].includes(chip)); $("modbox").classList.toggle("hidden", chip !== "mod");
   const pf = $("pfr"); pf.classList.toggle("hidden", !profile || profile.id === uid);
   if (profile) { pf.textContent = friendText(profile.id); pf.onclick = () => toggleFriend(profile.id, profile.name); }
   view.forEach(s => {
@@ -333,7 +359,7 @@ function renderMain() {
 }
 function renderSide() {
   const l = $("mine"); l.innerHTML = "";
-  const list = all().filter(s => s.uid === auth.currentUser?.uid && !s.yt);
+  const list = all().filter(s => s.uid === auth.currentUser?.uid && !s.ext);
   $("mineempty").classList.toggle("hidden", list.length > 0);
   list.forEach(s => {
     const r = el("div", "mrow" + (s.id === curId ? " on" : ""));
@@ -341,9 +367,9 @@ function renderSide() {
     const info = el("div", "info"); info.append(el("div", "t", s.title), el("div", "a", s.artist));
     cv.onclick = info.onclick = () => playId(s.id, list);
     const isPub = s.visibility === "public";
-    const bd = el("button", "badge" + (isPub ? " public" : ""), isPub ? "Public" : "Private");
+    const bd = el("button", "badge" + (isPub ? " public" : ""), s.visibility === "hidden" ? "Gizlendi" : isPub ? "Public" : "Private");
     bd.title = "Paylaşım durumunu değiştir";
-    bd.onclick = () => updateDoc(doc(db, "songs", s.id), { visibility: isPub ? "private" : "public" }).catch(e => say("upmsg", "Hata: " + e.message, true));
+    bd.onclick = () => s.visibility === "hidden" ? say("upmsg", "Bu şarkı moderasyon tarafından gizlendi.", true) : updateDoc(doc(db, "songs", s.id), { visibility: isPub ? "private" : "public" }).catch(e => say("upmsg", "Hata: " + e.message, true));
     const del = el("button", "del", "Sil");
     del.onclick = async () => { if (await ask(`"${s.title}" silinsin mi?`, { ok: "Sil" })) deleteDoc(doc(db, "songs", s.id)).catch(e => say("upmsg", "Silinemedi: " + e.message, true)); };
     r.append(cv, info, bd, del); l.append(r);
@@ -351,14 +377,14 @@ function renderSide() {
 }
 function renderNP() {
   const s = all().find(x => x.id === curId) || (tmpSong && tmpSong.id === curId ? tmpSong : null);
-  setCover($("npc"), s); setCover($("bc"), s);
+  setCover($("npc"), s); setCover($("bc"), s); applyTheme(s);
   $("npt").textContent = $("bt").textContent = s ? s.title : "Çalan şarkı yok";
   $("npa").textContent = $("ba").textContent = s ? s.artist + " · @" + (s.by || "bilinmiyor") : "";
 }
 $("q").oninput = () => { renderMain(); findPeople(); };
-function setChip(c) { if (!c.startsWith("u:")) profile = null; if (c === "users") loadUsers(); chip = c; ["all", "mine", "likes", "fr", "users", "yt"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
+function setChip(c) { if (!c.startsWith("u:")) profile = null; if (c === "users") loadUsers(); chip = c; ["all", "mine", "likes", "fr", "users", "yt", "jm", "mod"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
 $("home").onclick = () => { $("q").value = ""; findPeople(); setChip("all"); };
-["all", "mine", "likes", "fr", "users", "yt"].forEach(k => $("c-" + k).onclick = () => setChip(k));
+["all", "mine", "likes", "fr", "users", "yt", "jm", "mod"].forEach(k => $("c-" + k).onclick = () => setChip(k));
 
 function ask(title, o = {}) {
   return new Promise(res => {
@@ -390,7 +416,7 @@ function findPeople() {
   }, 300);
 }
 function renderPeople() {
-  const list = chip === "users" ? usersAll : chip === "yt" ? [] : people;
+  const list = chip === "users" ? usersAll : ["yt", "jm", "mod"].includes(chip) ? [] : people;
   const box = $("plist"); box.innerHTML = ""; $("people").classList.toggle("hidden", !list.length);
   list.forEach(x => {
     const r = el("div", "mrow"), cv = el("div", "cov"); setCover(cv, { cover: x.photo, title: x.name });
@@ -459,11 +485,86 @@ function renderMenu() {
   b.append(el("h2", null, s.title), el("div", "a", s.artist + " · @" + by));
   const mk = (t, f) => { const x = el("button", "btn ghost", t); x.onclick = f; b.append(x); };
   mk(likes.has(s.id) ? "♥ Sevilenlerden çıkar" : "♡ Sevilenlere ekle", () => ensure(s).then(() => toggleLike(s.id)).catch(fail));
-  if (s.uid !== me && !s.yt) mk("Profilini aç: @" + by, () => { $("smenu").close(); openProfile({ id: s.uid, name: by }); });
+  if (s.uid !== me && !s.ext) mk("Profilini aç: @" + by, () => { $("smenu").close(); openProfile({ id: s.uid, name: by }); });
   if (s.uid !== me) mk(friendAct(s.uid) + ": @" + by, () => toggleFriend(s.uid, by));
+  if (s.uid !== me && !s.ext) mk("Şikayet et", () => { $("smenu").close(); reportSong(s); });
+  if (s.yt) mk("YouTube'da aç", () => openYt(s.yt));
   b.append(el("div", "lbl", "Çalma listesine ekle"));
   if (!pls.length) b.append(el("div", "msg", "Önce soldan bir çalma listesi oluştur."));
   pls.forEach(p => { const has = (p.songIds || []).includes(s.id); mk((has ? "✓ " : "+ ") + p.name, () => ensure(s).then(() => updateDoc(doc(db, "playlists", p.id), { songIds: has ? arrayRemove(s.id) : arrayUnion(s.id) })).catch(fail)); });
+}
+
+/* ---------- Theme that follows the playing song ---------- */
+let themeOn = true, themeFor = null;
+try { themeOn = localStorage.getItem("amTheme") !== "off"; } catch (e) {}
+const curSong = () => all().find(x => x.id === curId) || (tmpSong && tmpSong.id === curId ? tmpSong : null);
+const hash = str => { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+function coverHue(url) {
+  return new Promise(res => {
+    if (!url) return res(null);
+    const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => {
+      try {
+        const c = document.createElement("canvas"); c.width = c.height = 24;
+        const x = c.getContext("2d"); x.drawImage(im, 0, 0, 24, 24);
+        const d = x.getImageData(0, 0, 24, 24).data; let R = 0, G = 0, B = 0, W = 0;
+        for (let i = 0; i < d.length; i += 4) { const w = Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) + 8; R += d[i] * w; G += d[i + 1] * w; B += d[i + 2] * w; W += w; }
+        const r = R / W / 255, g = G / W / 255, b = B / W / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), dl = mx - mn;
+        let h = 0; if (dl) h = (mx === r ? ((g - b) / dl + (g < b ? 6 : 0)) : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4) * 60;
+        res(dl < 0.08 ? null : [h, Math.min(1, dl / (mx || 1))]);
+      } catch (e) { res(null); }
+    };
+    im.onerror = () => res(null); im.src = url;
+  });
+}
+async function applyTheme(s) {
+  const key = themeOn && s ? s.id : "", st = document.documentElement.style;
+  if (key === themeFor) return; themeFor = key;
+  if (!key) { st.removeProperty("--accent"); st.removeProperty("--g1"); return; }
+  const hs = await coverHue(s.cover);
+  if (themeFor !== key) return;
+  const h = hs ? hs[0] : hash(s.title + s.artist) % 360, sat = Math.max(0.45, Math.min(0.9, hs ? hs[1] : 0.6));
+  st.setProperty("--accent", `hsl(${Math.round(h)} ${Math.round(sat * 100)}% 72%)`);
+  st.setProperty("--g1", `hsl(${Math.round(h)} ${Math.round(sat * 55)}% 24%)`);
+}
+$("themeauto").onchange = () => { themeOn = $("themeauto").checked; try { localStorage.setItem("amTheme", themeOn ? "on" : "off"); } catch (e) {} themeFor = null; applyTheme(curSong()); };
+
+/* ---------- Moderation: reports and admin panel ---------- */
+async function reportSong(s) {
+  const why = await ask("Şarkıyı şikayet et", { input: true, ph: "Sebep (telif hakkı, uygunsuz içerik…)", ok: "Gönder" });
+  if (!why) return;
+  const me = auth.currentUser.uid;
+  setDoc(doc(db, "reports", s.id + "_" + me), { songId: s.id, title: s.title, artist: s.artist, songUid: s.uid, reporter: me, reason: why.slice(0, 200), status: "open", createdAt: serverTimestamp() })
+    .then(() => say("upmsg", "Şikayetin alındı, teşekkürler.")).catch(fail);
+}
+const closeReports = x => Promise.all(x.items.map(i => deleteDoc(doc(db, "reports", i.id))));
+function renderMod() {
+  $("c-mod").classList.toggle("hidden", !isAdmin);
+  if (!isAdmin) { if (chip === "mod") setChip("all"); return; }
+  const grp = new Map();
+  reports.forEach(r => { const x = grp.get(r.songId) || { id: r.songId, title: r.title, artist: r.artist, items: [] }; x.items.push(r); grp.set(r.songId, x); });
+  const box = $("modrep"); box.innerHTML = ""; $("modempty").classList.toggle("hidden", grp.size > 0);
+  grp.forEach(x => {
+    const r = el("div", "mrow"), info = el("div", "info"), song = all().find(s => s.id === x.id);
+    const why = [...new Set(x.items.map(i => i.reason))].join(" | ").slice(0, 160);
+    info.append(el("div", "t", x.title), el("div", "a wrap", `${x.artist} · ${x.items.length} şikayet · ${why}`));
+    r.append(info);
+    if (song) { const p = el("button", "badge", "▶"); p.onclick = () => { tmpSong = song; playId(song.id, [song]); }; r.append(p); }
+    const hide = el("button", "badge public", "Gizle"), keep = el("button", "badge", "Kapat"), del = el("button", "del", "Sil");
+    hide.onclick = () => updateDoc(doc(db, "songs", x.id), { visibility: "hidden", hiddenBy: auth.currentUser.uid, hiddenAt: serverTimestamp() }).then(() => closeReports(x)).catch(fail);
+    keep.onclick = () => closeReports(x).catch(fail);
+    del.onclick = async () => { if (await ask(`"${x.title}" kalıcı olarak silinsin mi?`, { ok: "Sil" })) deleteDoc(doc(db, "songs", x.id)).then(() => closeReports(x)).catch(fail); };
+    r.append(hide, keep, del); box.append(r);
+  });
+  const hb = $("modhid"); hb.innerHTML = "";
+  hiddenSongs.forEach(s => {
+    const r = el("div", "mrow"), info = el("div", "info");
+    info.append(el("div", "t", s.title), el("div", "a", s.artist));
+    const re = el("button", "badge public", "Geri yükle"), del = el("button", "del", "Sil");
+    re.onclick = () => updateDoc(doc(db, "songs", s.id), { visibility: "public" }).catch(fail);
+    del.onclick = async () => { if (await ask(`"${s.title}" kalıcı olarak silinsin mi?`, { ok: "Sil" })) deleteDoc(doc(db, "songs", s.id)).catch(fail); };
+    r.append(info, re, del); hb.append(r);
+  });
 }
 
 /* ---------- Users & YouTube ---------- */
@@ -473,7 +574,7 @@ async function loadUsers() {
 }
 function openProfile(x) { profile = { id: x.id, name: x.name || "kullanıcı" }; $("q").value = ""; people = []; setChip("u:" + x.id); }
 const dec = h => { const t = document.createElement("textarea"); t.innerHTML = h; return t.value; };
-const ensure = s => (s.yt && !ytSaved.some(x => x.id === s.id)) ? setDoc(doc(db, "ytsaved", auth.currentUser.uid + "_" + s.yt), { uid: auth.currentUser.uid, videoId: s.yt, title: s.title, channel: s.artist, thumb: s.cover, createdAt: serverTimestamp() }) : Promise.resolve();
+const ensure = s => (s.ext && !ytSaved.some(x => x.id === s.id)) ? setDoc(doc(db, "ytsaved", auth.currentUser.uid + "_" + (s.jm ? "jm" + s.jm : s.yt)), { uid: auth.currentUser.uid, videoId: s.jm || s.yt, src: s.jm ? "jamendo" : "yt", by: s.by || "", url: s.url || "", title: s.title, channel: s.artist, thumb: s.cover || "", createdAt: serverTimestamp() }) : Promise.resolve();
 async function ytSearch() {
   const t = $("ytq").value.trim(); if (!t) return;
   if (YT_KEY.startsWith("YOUR_")) return say("ytmsg", "index.html içine YouTube API anahtarını ekle.", true);
@@ -493,13 +594,40 @@ function renderYt(items) {
     const pl = el("button", "badge", "▶ Çal"), ad = el("button", "badge public", "+ Ekle");
     pl.onclick = () => { tmpSong = s; queue = [s]; curId = s.id; playYt(s); renderAll(); };
     ad.onclick = () => { tmpSong = s; openMenu(s.id); };
+    const op = el("button", "badge", "↗"); op.title = "YouTube'da aç"; op.setAttribute("aria-label", "YouTube'da aç"); op.onclick = () => openYt(s.yt);
+    r.append(cv, info, pl, ad, op); box.append(r);
+  });
+}
+async function jmSearch() {
+  const t = $("jmq").value.trim(); if (!t) return;
+  say("jmmsg", "Aranıyor…");
+  try {
+    const r = await fetch("https://api.openverse.org/v1/audio/?page_size=20&q=" + encodeURIComponent(t));
+    if (r.status === 429) throw new Error("Çok fazla arama yapıldı, biraz bekleyip tekrar dene.");
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.status);
+    say("jmmsg", j.results.length ? "" : "Sonuç yok.");
+    renderJm(j.results.filter(i => i.url).map(i => ({ id: "jm:" + i.id, jm: i.id, ext: true, title: i.title || "Adsız", artist: i.creator || "Bilinmeyen sanatçı", cover: i.thumbnail || "", url: i.url.replace(/^http:/, "https:"), by: i.source || "Openverse", lic: (i.license || "").toUpperCase() })));
+  } catch (e) { say("jmmsg", "Hata: " + e.message, true); }
+}
+function renderJm(items) {
+  const box = $("jmres"); box.innerHTML = "";
+  items.forEach(s => {
+    const r = el("div", "mrow"), cv = el("div", "cov"), info = el("div", "info"); setCover(cv, s);
+    info.append(el("div", "t", s.title), el("div", "a wrap", s.artist + " · " + s.by + (s.lic ? " · CC " + s.lic : "")));
+    const pl = el("button", "badge", "▶ Çal"), ad = el("button", "badge public", "+ Ekle");
+    pl.onclick = () => { tmpSong = s; playId(s.id, items); };
+    ad.onclick = () => { tmpSong = s; openMenu(s.id); };
     r.append(cv, info, pl, ad); box.append(r);
   });
 }
+$("jmgo").onclick = jmSearch; $("jmq").onkeydown = e => { if (e.key === "Enter") jmSearch(); };
 $("ytgo").onclick = ytSearch; $("ytq").onkeydown = e => { if (e.key === "Enter") ytSearch(); };
-$("ytx").onclick = () => { if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); };
+$("ytx").onclick = () => { if (yp && yp.pauseVideo) yp.pauseVideo(); ytShow(false); };
+function ytShow(on) { $("ytp").classList.toggle("hidden", !on); document.body.classList.toggle("yt", on); }
+const openYt = id => { const u = "https://www.youtube.com/watch?v=" + id; if (window.AmethystApp) location.href = u; else window.open(u, "_blank", "noopener"); };
 function playYt(s) {
-  audio.pause(); ytOn = true; ytPending = s.yt; $("ytp").classList.remove("hidden");
+  audio.pause(); ytOn = true; ytPending = s.yt; ytShow(true);
   if (yp && yp.loadVideoById) return yp.loadVideoById(s.yt);
   if (window.YT && YT.Player) return initYt();
   window.onYouTubeIframeAPIReady = initYt;
@@ -519,7 +647,21 @@ if ("mediaSession" in navigator) {
   h("previoustrack", () => step(-1)); h("nexttrack", () => step(1));
   h("seekto", e => { audio.currentTime = e.seekTime; });
 }
-function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); $("ytp").classList.add("hidden"); audio.src = s.url; audio.play().catch(() => {}); setMedia(s); } renderAll(); }
+/* Android app bridge: media notification with controls (only exists inside the Android app) */
+function nativeState() {
+  const b = window.AmethystApp; if (!b) return;
+  const s = all().find(x => x.id === curId);
+  const ok = s && !s.yt && !ytOn;
+  try { b.update(ok ? s.title : "", ok ? s.artist : "", ok && s.cover ? s.cover : "", ok && !audio.paused); } catch (e) {}
+}
+window.amethystCmd = c => {
+  if (c === "play") { if (!ytOn) audio.play(); }
+  else if (c === "pause") audio.pause();
+  else if (c === "next") step(1);
+  else if (c === "prev") step(-1);
+};
+["play", "pause"].forEach(ev => audio.addEventListener(ev, nativeState));
+function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); ytShow(false); audio.src = s.url; audio.play().catch(() => {}); setMedia(s); } renderAll(); }
 function step(d) {
   if (!queue.length) return;
   let i = queue.findIndex(x => x.id === curId);
@@ -539,6 +681,7 @@ audio.ontimeupdate = () => { if (isFinite(audio.duration)) $("seek").value = aud
 audio.onplay = audio.onpause = () => { $("pp").textContent = audio.paused ? "▶" : "❚❚"; };
 audio.onended = () => step(1);
 setInterval(() => { if (!ytOn || !yp || !yp.getDuration) return; const d = yp.getDuration(), c = yp.getCurrentTime(); if (d > 0) { $("seek").value = c / d * 100; $("t1").textContent = fmt(c); $("t2").textContent = fmt(d); } }, 500);
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>
 </html>
