@@ -221,7 +221,7 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;flex:none
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, getDoc, arrayUnion, arrayRemove, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -265,7 +265,16 @@ const cloud = (file, kind, onp) => new Promise((ok, no) => {
 const authErr = e => say("authmsg", e.message.replace("Firebase: ", ""), true);
 $("login").onclick = () => signInWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
 $("signup").onclick = () => createUserWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
-$("google").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(authErr);
+$("google").onclick = async () => {
+  if (window.AmethystApp) return say("authmsg", "Google ile giriş uygulamanın içinde çalışmaz. E-posta ve şifre ile giriş yap.", true);
+  const gp = new GoogleAuthProvider();
+  try { await signInWithPopup(auth, gp); }
+  catch (e) {
+    if (["auth/popup-blocked", "auth/operation-not-supported-in-this-environment"].includes(e.code)) signInWithRedirect(auth, gp).catch(authErr);
+    else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") authErr(e);
+  }
+};
+getRedirectResult(auth).catch(authErr);
 $("out").onclick = () => { $("prof").close(); signOut(auth); };
 
 function renderAvatar() {
