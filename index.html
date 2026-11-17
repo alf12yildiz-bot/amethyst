@@ -110,6 +110,10 @@ body.out #side,body.out #np,body.out #bar,body.out #center{display:none}
 input:focus-visible,select:focus-visible{outline-offset:0}
 #viz{display:block;width:100%;height:90px;margin-top:16px}
 #vizmini{width:40px;height:26px;flex:none}
+#daybanner{display:flex;align-items:center;gap:12px;border-left:4px solid var(--dc,#a97bff);background:#ffffff14;border-radius:12px;padding:12px 14px;margin-bottom:16px}
+#dayemoji{font-size:28px}
+#daybanner .dayt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#daybanner .dayt span{color:var(--muted);font-size:14px}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
 @media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
@@ -170,6 +174,7 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 </aside>
 
 <main id="main">
+  <div id="daybanner" class="hidden"><span id="dayemoji"></span><div class="dayt"><b id="dayn"></b><span id="dayd"></span></div><button class="badge public hidden" id="daymusic">♫ Müzik bul</button><button class="del" id="dayx" aria-label="Kapat">✕</button></div>
   <section id="auth" class="box">
     <h1>Giriş yap</h1>
     <input type="email" id="em" placeholder="E-posta" autocomplete="email">
@@ -195,10 +200,12 @@ input:focus-visible,select:focus-visible{outline-offset:0}
       <button class="chip" id="c-users">Kullanıcılar</button>
       <button class="chip" id="c-yt">▶ YouTube</button>
       <button class="chip" id="c-jm">♫ Ücretsiz müzik</button>
+      <button class="chip" id="c-days">🎉 Özel günler</button>
       <button class="chip hidden" id="c-mod">🛡 Moderasyon</button>
     </div>
     <div id="people" class="hidden"><h1>Hesaplar</h1><div id="plist"></div></div>
     <div id="ytbox" class="hidden"><div class="note">⚠ Yasal sebeplerden dolayı YouTube müzikleri arka planda çalışmayacaktır.</div><div class="row2"><input type="text" id="ytq" placeholder="YouTube'da şarkı ara"><button class="btn" id="ytgo">Ara</button></div><div class="msg" id="ytmsg"></div><div id="ytres"></div></div>
+    <div id="daysbox" class="hidden"><div id="dayslist"></div><div class="msg" id="daysnote"></div></div>
     <div id="modbox" class="hidden"><div class="note">Moderasyon paneli: sadece yöneticiler görür.</div><div class="sub">Açık şikayetler</div><div id="modrep"></div><div class="msg" id="modempty">Açık şikayet yok.</div><div class="sub">Gizlenen şarkılar</div><div id="modhid"></div></div>
     <div id="jmbox" class="hidden"><div class="note">Openverse üzerinden bulunan Creative Commons lisanslı müzikler (Jamendo, Wikimedia gibi kaynaklardan). Bu şarkılar arka planda da çalar.</div><div class="row2"><input type="text" id="jmq" placeholder="Ücretsiz müzik ara"><button class="btn" id="jmgo">Ara</button></div><div class="msg" id="jmmsg"></div><div id="jmres"></div></div>
     <h1 id="ttl">Herkese açık şarkılar</h1><button class="btn hidden" id="pfr"></button>
@@ -249,7 +256,8 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect, getRedirectResult, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, getDoc, arrayUnion, arrayRemove, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, getDoc, arrayUnion, arrayRemove, increment, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDOgyYp9XpgLDur2vgnwB5F7t5nOq0EVGE",
@@ -257,7 +265,8 @@ const firebaseConfig = {
   projectId: "amethyst-2b7ac",
   storageBucket: "amethyst-2b7ac.firebasestorage.app",
   messagingSenderId: "580085133398",
-  appId: "1:580085133398:web:a67b235f1b8c00dbd20bf7"
+  appId: "1:580085133398:web:a67b235f1b8c00dbd20bf7",
+  measurementId: "G-PL95LSZD1J"
 };
 const CLOUD_NAME = "h1yxfuyt";
 const UPLOAD_PRESET = "amethyst";
@@ -265,6 +274,7 @@ const YT_KEY = "AIzaSyCtvb9YuLlizM-54GT99mMWrqafihNkr3M";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app), db = getFirestore(app);
+isSupported().then(ok => { if (ok) getAnalytics(app); }).catch(() => {});
 const $ = id => document.getElementById(id);
 const audio = $("audio");
 const webOnly = !window.AmethystApp && !/iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -321,7 +331,7 @@ const subErr = e => say("empty", "Şarkılar yüklenemedi: " + e.message, true);
 onAuthStateChanged(auth, user => {
   ["app", "upbox", "minebox", "plbox", "invbox", "avatar"].forEach(i => $(i).classList.toggle("hidden", !user));
   $("auth").classList.toggle("hidden", !!user);
-  document.body.classList.toggle("out", !user); $("apkbox").classList.toggle("hidden", !!user || !webOnly);
+  document.body.classList.toggle("out", !user); spent = 0; lastTick = 0; $("apkbox").classList.toggle("hidden", !!user || !webOnly);
   unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = []; ytSaved = []; inv = []; outg = new Set();
   if (user) {
     renderAvatar(); saveUser();
@@ -380,17 +390,17 @@ $("up").onclick = async () => {
 };
 
 /* ---------- Render ---------- */
-function renderAll() { renderMain(); renderSide(); renderInv(); renderPls(); renderPeople(); renderNP(); renderMod(); if ($("smenu").open) renderMenu(); }
+function renderAll() { renderMain(); renderSide(); renderInv(); renderPls(); renderPeople(); renderNP(); renderMod(); renderBanner(); if ($("smenu").open) renderMenu(); }
 function renderMain() {
   const term = $("q").value.trim().toLowerCase(), uid = auth.currentUser?.uid;
-  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", users: "Kullanıcılar", yt: "YouTube", jm: "Ücretsiz müzik", mod: "Moderasyon", fr: "Arkadaşların şarkıları" };
+  const T = { all: "Herkese açık şarkılar", mine: "Benim şarkılarım", likes: "Sevilenler", users: "Kullanıcılar", yt: "YouTube", jm: "Ücretsiz müzik", mod: "Moderasyon", days: "Özel günler", fr: "Arkadaşların şarkıları" };
   const pl = pls.find(x => "pl:" + x.id === chip);
   $("ttl").textContent = pl ? pl.name : profile ? "@" + profile.name : T[chip] || "Şarkılar";
-  const inChip = s => ["users", "yt", "jm", "mod"].includes(chip) ? false : profile ? (s.uid === profile.id && s.visibility === "public") : chip === "all" ? (!s.ext && (s.visibility === "public" || s.uid === uid)) : chip === "mine" ? (!s.ext && s.uid === uid) : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
+  const inChip = s => ["users", "yt", "jm", "mod", "days"].includes(chip) ? false : profile ? (s.uid === profile.id && s.visibility === "public") : chip === "all" ? (!s.ext && (s.visibility === "public" || s.uid === uid)) : chip === "mine" ? (!s.ext && s.uid === uid) : chip === "likes" ? likes.has(s.id) : chip === "fr" ? (friends.has(s.uid) && s.visibility === "public") : !!pl && (pl.songIds || []).includes(s.id);
   view = all().filter(s => inChip(s) && (!term || (s.title + " " + s.artist).toLowerCase().includes(term)));
   const g = $("grid"); g.innerHTML = "";
-  $("empty").classList.toggle("hidden", view.length > 0 || ["users", "yt", "jm", "mod"].includes(chip));
-  $("ytbox").classList.toggle("hidden", chip !== "yt"); $("jmbox").classList.toggle("hidden", chip !== "jm"); g.classList.toggle("hidden", ["users", "yt", "jm", "mod"].includes(chip)); $("modbox").classList.toggle("hidden", chip !== "mod");
+  $("empty").classList.toggle("hidden", view.length > 0 || ["users", "yt", "jm", "mod", "days"].includes(chip));
+  $("ytbox").classList.toggle("hidden", chip !== "yt"); $("jmbox").classList.toggle("hidden", chip !== "jm"); g.classList.toggle("hidden", ["users", "yt", "jm", "mod", "days"].includes(chip)); $("modbox").classList.toggle("hidden", chip !== "mod"); $("daysbox").classList.toggle("hidden", chip !== "days"); if (chip === "days") renderDays();
   const pf = $("pfr"); pf.classList.toggle("hidden", !profile || profile.id === uid);
   if (profile) { pf.textContent = friendText(profile.id); pf.onclick = () => toggleFriend(profile.id, profile.name); }
   view.forEach(s => {
@@ -427,9 +437,9 @@ function renderNP() {
   $("npa").textContent = $("ba").textContent = s ? s.artist + " · @" + (s.by || "bilinmiyor") : "";
 }
 $("q").oninput = () => { renderMain(); findPeople(); };
-function setChip(c) { if (!c.startsWith("u:")) profile = null; if (c === "users") loadUsers(); chip = c; ["all", "mine", "likes", "fr", "users", "yt", "jm", "mod"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
+function setChip(c) { if (!c.startsWith("u:")) profile = null; if (c === "users") loadUsers(); chip = c; ["all", "mine", "likes", "fr", "users", "yt", "jm", "mod", "days"].forEach(k => $("c-" + k).classList.toggle("on", chip === k)); renderAll(); }
 $("home").onclick = () => { $("q").value = ""; findPeople(); setChip("all"); };
-["all", "mine", "likes", "fr", "users", "yt", "jm", "mod"].forEach(k => $("c-" + k).onclick = () => setChip(k));
+["all", "mine", "likes", "fr", "users", "yt", "jm", "mod", "days"].forEach(k => $("c-" + k).onclick = () => setChip(k));
 
 function ask(title, o = {}) {
   return new Promise(res => {
@@ -455,19 +465,19 @@ function findPeople() {
     if (t.length < 2 || !auth.currentUser) { people = []; return renderPeople(); }
     try {
       const r = await getDocs(query(collection(db, "users"), where("nameLower", ">=", t), where("nameLower", "<=", t + "\uf8ff")));
-      people = r.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== auth.currentUser.uid).slice(0, 8);
+      people = r.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 8);
     } catch (e) { people = []; }
     renderPeople();
   }, 300);
 }
 function renderPeople() {
-  const list = chip === "users" ? usersAll : ["yt", "jm", "mod"].includes(chip) ? [] : people;
+  const list = chip === "users" ? usersAll : ["yt", "jm", "mod", "days"].includes(chip) ? [] : people;
   const box = $("plist"); box.innerHTML = ""; $("people").classList.toggle("hidden", !list.length);
   list.forEach(x => {
     const r = el("div", "mrow"), cv = el("div", "cov"); setCover(cv, { cover: x.photo, title: x.name });
-    const info = el("div", "info"); info.append(el("div", "t", x.name), el("div", "a", "@" + x.name)); info.onclick = () => openProfile(x);
+    const info = el("div", "info"); info.append(el("div", "t", x.name + (x.id === auth.currentUser?.uid ? " (sen)" : "")), el("div", "a wrap", "@" + x.name + (x.seconds ? " · " + fmtDur(x.seconds) + " uygulamada" : ""))); info.onclick = () => openProfile(x);
     const f = friends.has(x.id), b = el("button", "badge" + (f ? " public" : ""), friendText(x.id));
-    b.onclick = () => toggleFriend(x.id, x.name); r.append(cv, info, b); box.append(r);
+    if (x.id === auth.currentUser?.uid) r.append(cv, info); else { b.onclick = () => toggleFriend(x.id, x.name); r.append(cv, info, b); } box.append(r);
   });
 }
 const friendText = id => friends.has(id) ? "Arkadaşın ✓" : outg.has(id) ? "Davet gönderildi" : inv.some(i => i.from === id) ? "Daveti kabul et" : "Arkadaş ekle";
@@ -667,9 +677,115 @@ audio.addEventListener("playing", attachAnalyser);
 document.addEventListener("visibilitychange", startViz);
 setInterval(startViz, 500);
 
+/* ---------- Time spent in the app ---------- */
+// Counts the time the app is on screen or music is playing, saves it to the user's profile every 2 minutes.
+let spent = 0, lastTick = 0;
+const fmtDur = sec => { const m = Math.floor(sec / 60), h = Math.floor(m / 60); return m < 1 ? "<1 dk" : h ? `${h} sa ${m % 60} dk` : `${m} dk`; };
+function tickTime() {
+  const now = Date.now();
+  if (lastTick && auth.currentUser && (!document.hidden || !audio.paused)) spent += Math.min(30, (now - lastTick) / 1000);
+  lastTick = now;
+}
+function flushTime() {
+  tickTime();
+  const u = auth.currentUser, add = Math.floor(spent);
+  if (!u || add < 10) return;
+  spent -= add;
+  setDoc(doc(db, "users", u.uid), { seconds: increment(add) }, { merge: true }).catch(() => { spent += add; });
+}
+setInterval(tickTime, 5000);
+setInterval(flushTime, 120000);
+document.addEventListener("visibilitychange", () => { if (document.hidden) flushTime(); });
+window.addEventListener("pagehide", flushTime);
+
+/* ---------- Special days ---------- */
+const SPECIAL = [
+  { m: 1, d: 1, n: "Yılbaşı", e: "🎆", s: "Dünya", c: "#f5c542", t: "Miladi takvimin ilk günü; dünya genelinde resmi tatil olarak kutlanır.", w: "Mutlu yıllar!", q: "new year" },
+  { m: 2, d: 14, n: "Sevgililer Günü", e: "💝", s: "Dünya", c: "#ff5d8f", t: "Küresel çapta kutlanan en popüler sosyal günlerden biri.", q: "love" },
+  { m: 3, d: 8, n: "Dünya Kadınlar Günü", e: "💜", s: "Dünya", c: "#b46bff", t: "Birleşmiş Milletler'in tanımladığı uluslararası farkındalık günü.", w: "Dünya Kadınlar Günü kutlu olsun!", q: "women" },
+  { m: 4, d: 22, n: "Dünya Günü", e: "🌍", s: "Dünya", c: "#3ddc97", t: "Çevre koruma ve iklim değişikliği farkındalığı için anılır.", w: "Gezegenimize sahip çıkalım.", q: "nature" },
+  { m: 4, d: 23, n: "Ulusal Egemenlik ve Çocuk Bayramı", e: "🇹🇷", s: "Türkiye", c: "#e63946", t: "Türkiye'nin ilk resmi ulusal bayramı; tüm dünya çocuklarına armağan edilmiştir.", q: "children" },
+  { m: 5, d: 1, n: "Emek ve Dayanışma Günü", e: "✊", s: "Dünya", c: "#ff6b57", t: "Türkiye dahil birçok ülkede İşçi Bayramı olarak resmi tatildir.", w: "Emek ve Dayanışma Günü kutlu olsun!", q: "solidarity" },
+  { m: 5, d: 19, n: "Atatürk'ü Anma, Gençlik ve Spor Bayramı", e: "🇹🇷", s: "Türkiye", c: "#e63946", t: "Milli Mücadele'nin başlangıcı olarak kutlanan resmi tatil.", q: "youth" },
+  { m: 7, d: 15, n: "Demokrasi ve Milli Birlik Günü", e: "🇹🇷", s: "Türkiye", c: "#9aa0b4", t: "Resmi tatil olarak anılan anma günü.", w: "Saygıyla anıyoruz.", k: false },
+  { m: 8, d: 30, n: "Zafer Bayramı", e: "🇹🇷", s: "Türkiye", c: "#e63946", t: "Büyük Taarruz'un zaferle sonuçlanmasının yıldönümü; resmi tatil.", q: "victory" },
+  { m: 10, d: 29, n: "Cumhuriyet Bayramı", e: "🇹🇷", s: "Türkiye", c: "#e63946", t: "Türkiye Cumhuriyeti'nin ilanının kutlandığı en büyük ulusal bayram.", q: "republic" },
+  { m: 10, d: 31, n: "Cadılar Bayramı (Halloween)", e: "🎃", s: "Dünya", c: "#ff8a1f", t: "Başta ABD ve Avrupa olmak üzere birçok ülkede eğlence ve etkinliklerle kutlanır.", q: "halloween" },
+  { m: 11, d: 10, n: "Atatürk'ü Anma Günü", e: "🇹🇷", s: "Türkiye", c: "#9aa0b4", t: "Resmi tatil değildir ancak ülke genelinde anma etkinlikleri düzenlenir.", w: "Saygıyla anıyoruz.", k: false },
+  { m: 11, d: 24, n: "Öğretmenler Günü", e: "📚", s: "Türkiye", c: "#4da3ff", t: "Türkiye'ye özgü önemli bir kutlama günü.", w: "Tüm öğretmenlerin günü kutlu olsun!", q: "school" },
+  { m: 12, d: 25, n: "Noel (Christmas)", e: "🎄", s: "Dünya", c: "#2fbf71", t: "Hristiyan dünyasında ve batı ülkelerinde en büyük resmi tatil dönemi.", q: "christmas" }
+];
+// Official Diyanet dates; other years are calculated from the Hijri calendar and can be a day off
+const OFFICIAL = { 2026: { r: [3, 20], k: [5, 27] }, 2027: { r: [3, 9], k: [5, 16] } };
+const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const trDate = d => d.toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
+function hijri(y, month, day) {
+  try {
+    const f = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", { year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" });
+    if (f.resolvedOptions().calendar !== "islamic-umalqura") return null;
+    for (let t = Date.UTC(y, 0, 1); t < Date.UTC(y + 1, 0, 1); t += 864e5) {
+      const p = {}; f.formatToParts(new Date(t)).forEach(x => { p[x.type] = x.value; });
+      if (+p.month === month && +p.day === day) { const d = new Date(t); return [d.getUTCMonth() + 1, d.getUTCDate()]; }
+    }
+  } catch (e) {}
+  return null;
+}
+function specialIn(y) {
+  const out = SPECIAL.map(x => ({ ...x, start: new Date(y, x.m - 1, x.d), end: new Date(y, x.m - 1, x.d) }));
+  const sunday = (month, n) => 1 + (7 - new Date(y, month, 1).getDay()) % 7 + 7 * (n - 1);
+  const anne = new Date(y, 4, sunday(4, 2)), baba = new Date(y, 5, sunday(5, 3));
+  out.push({ n: "Anneler Günü", e: "💐", s: "Dünya", c: "#ff8fb1", t: "Mayıs ayının 2. Pazarı; Türkiye'de ve ABD'de aynı gün kutlanır.", w: "Tüm annelerin günü kutlu olsun!", q: "mother", start: anne, end: anne });
+  out.push({ n: "Babalar Günü", e: "👔", s: "Dünya", c: "#4da3ff", t: "Haziran ayının 3. Pazarı; Türkiye'de ve ABD'de aynı gün kutlanır.", w: "Tüm babaların günü kutlu olsun!", q: "father", start: baba, end: baba });
+  const o = OFFICIAL[y] || {}, r = o.r || hijri(y, 10, 1), k = o.k || hijri(y, 12, 10);
+  if (r) { const st = new Date(y, r[0] - 1, r[1]); out.push({ n: "Ramazan Bayramı", e: "🌙", s: "Türkiye", c: "#2fbf9a", t: "3,5 gün sürer (arefe yarım gün). Hicri takvime göre her yıl 10-11 gün öne kayar.", w: "Bayramınız kutlu olsun!", q: "peace", start: st, end: addDays(st, 2) }); }
+  if (k) { const st = new Date(y, k[0] - 1, k[1]); out.push({ n: "Kurban Bayramı", e: "🌙", s: "Türkiye", c: "#2fbf9a", t: "4,5 gün sürer (arefe yarım gün). Hicri takvime göre her yıl 10-11 gün öne kayar.", w: "Bayramınız kutlu olsun!", q: "peace", start: st, end: addDays(st, 3) }); }
+  return out;
+}
+function upcomingDays() {
+  const today = midnight(new Date()), y = today.getFullYear();
+  return [...specialIn(y), ...specialIn(y + 1)].filter(x => x.end >= today).sort((a, b) => a.start - b.start);
+}
+function whenText(x, today) {
+  if (x.start <= today && x.end >= today) return x.end > x.start ? "Devam ediyor" : "Bugün";
+  const n = Math.round((x.start - today) / 864e5);
+  return n === 1 ? "Yarın" : n + " gün kaldı";
+}
+const dayRange = x => x.end > x.start ? `${x.start.getDate()}–${trDate(x.end)}` : trDate(x.start);
+function renderBanner() {
+  const b = $("daybanner"), today = midnight(new Date());
+  const x = upcomingDays().find(d => (d.start - today) / 864e5 <= 2);
+  let hide = !x, key = "";
+  if (x) { key = x.n + "|" + x.start.toDateString(); try { hide = localStorage.getItem("amDay") === key; } catch (e) {} }
+  b.classList.toggle("hidden", hide);
+  if (!x || hide) return;
+  const active = x.start <= today;
+  b.style.setProperty("--dc", x.c); b.dataset.key = key; b.dataset.q = x.q || "";
+  $("dayemoji").textContent = x.e;
+  $("dayn").textContent = active ? (x.k === false ? "Bugün " + x.n : "Bugün " + x.n + "!") : whenText(x, today) + ": " + x.n;
+  $("dayd").textContent = active ? (x.w || "Kutlu olsun!") : x.t;
+  $("daymusic").classList.toggle("hidden", !auth.currentUser || !x.q);
+}
+function dayMusic(q) { setChip("jm"); $("jmq").value = q; jmSearch(); }
+function renderDays() {
+  const today = midnight(new Date()), box = $("dayslist"); box.innerHTML = "";
+  upcomingDays().forEach(x => {
+    const r = el("div", "mrow"), cv = el("div", "cov"), info = el("div", "info");
+    cv.textContent = x.e; cv.style.background = x.c + "40"; cv.style.fontSize = "22px";
+    info.append(el("div", "t", x.n), el("div", "a wrap", `${dayRange(x)} · ${x.s} · ${whenText(x, today)}`), el("div", "a wrap", x.t));
+    r.append(cv, info);
+    if (x.q) { const m = el("button", "badge", "♫ Müzik"); m.onclick = () => dayMusic(x.q); r.append(m); }
+    box.append(r);
+  });
+  $("daysnote").textContent = "Dinî bayram tarihleri 2026-2027 için Diyanet takvimine göredir. Sonraki yıllar hesaplamadır, bir gün farklı çıkabilir.";
+}
+$("dayx").onclick = () => { try { localStorage.setItem("amDay", $("daybanner").dataset.key); } catch (e) {} $("daybanner").classList.add("hidden"); };
+$("daymusic").onclick = () => dayMusic($("daybanner").dataset.q);
+renderBanner();
+
 /* ---------- Users & YouTube ---------- */
 async function loadUsers() {
-  try { const r = await getDocs(query(collection(db, "users"), limit(60))); usersAll = r.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== auth.currentUser.uid); } catch (e) { fail(e); }
+  try { const r = await getDocs(query(collection(db, "users"), limit(60))); usersAll = r.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seconds || 0) - (a.seconds || 0)); } catch (e) { fail(e); }
   renderPeople();
 }
 function openProfile(x) { profile = { id: x.id, name: x.name || "kullanıcı" }; $("q").value = ""; people = []; setChip("u:" + x.id); }
