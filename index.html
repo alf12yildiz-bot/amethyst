@@ -114,6 +114,9 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 #dayemoji{font-size:28px}
 #daybanner .dayt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 #daybanner .dayt span{color:var(--muted);font-size:14px}
+#c-days{position:relative;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);font-size:20px;flex:none}
+#c-days.on{background:var(--accent)}
+#c-days.hasday::after{content:"";position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
 @media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
@@ -139,6 +142,7 @@ input:focus-visible,select:focus-visible{outline-offset:0}
     <button id="home" aria-label="Ana sayfa">⌂</button>
     <input id="q" type="search" placeholder="Ne çalmak istiyorsun?" aria-label="Ara">
   </div>
+  <button id="c-days" class="hidden" aria-label="Özel günler" title="Özel günler">🎉</button>
   <button id="avatar" class="hidden" aria-label="Profil"></button>
 </header>
 
@@ -200,7 +204,6 @@ input:focus-visible,select:focus-visible{outline-offset:0}
       <button class="chip" id="c-users">Kullanıcılar</button>
       <button class="chip" id="c-yt">▶ YouTube</button>
       <button class="chip" id="c-jm">♫ Ücretsiz müzik</button>
-      <button class="chip" id="c-days">🎉 Özel günler</button>
       <button class="chip hidden" id="c-mod">🛡 Moderasyon</button>
     </div>
     <div id="people" class="hidden"><h1>Hesaplar</h1><div id="plist"></div></div>
@@ -246,6 +249,7 @@ input:focus-visible,select:focus-visible{outline-offset:0}
   <input type="text" id="pname" placeholder="Görünen ad">
   <label class="lbl">Profil resmi<input type="file" id="pfile" accept="image/*"></label>
   <label class="lbl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="themeauto"> Çalan müziğe göre tema</label>
+  <label class="lbl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="daytheme"> Özel günlerde tema</label>
   <div class="msg" id="pmsg"></div>
   <a class="btn ghost hidden" id="apk2" href="Amethyst.apk" download="Amethyst.apk">⬇ Android uygulamasını indir</a>
   <button class="btn" id="psave">Kaydet</button>
@@ -329,7 +333,7 @@ function renderAvatar() {
 }
 const subErr = e => say("empty", "Şarkılar yüklenemedi: " + e.message, true);
 onAuthStateChanged(auth, user => {
-  ["app", "upbox", "minebox", "plbox", "invbox", "avatar"].forEach(i => $(i).classList.toggle("hidden", !user));
+  ["app", "upbox", "minebox", "plbox", "invbox", "avatar", "c-days"].forEach(i => $(i).classList.toggle("hidden", !user));
   $("auth").classList.toggle("hidden", !!user);
   document.body.classList.toggle("out", !user); spent = 0; lastTick = 0; $("apkbox").classList.toggle("hidden", !!user || !webOnly);
   unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = []; ytSaved = []; inv = []; outg = new Set();
@@ -357,7 +361,7 @@ onAuthStateChanged(auth, user => {
 });
 
 /* ---------- Profile ---------- */
-$("avatar").onclick = () => { $("pname").value = auth.currentUser.displayName || ""; $("pfile").value = ""; $("themeauto").checked = themeOn; say("pmsg", ""); $("prof").showModal(); };
+$("avatar").onclick = () => { $("pname").value = auth.currentUser.displayName || ""; $("pfile").value = ""; $("themeauto").checked = themeOn; $("daytheme").checked = dayThemeOn; say("pmsg", ""); $("prof").showModal(); };
 $("pclose").onclick = () => $("prof").close();
 $("psave").onclick = async () => {
   try {
@@ -550,8 +554,8 @@ function renderMenu() {
 }
 
 /* ---------- Theme that follows the playing song ---------- */
-let themeOn = true, themeFor = null;
-try { themeOn = localStorage.getItem("amTheme") !== "off"; } catch (e) {}
+let themeOn = true, themeFor = null, songThemed = false, dayThemeOn = true, dayThemeKey = "";
+try { themeOn = localStorage.getItem("amTheme") !== "off"; dayThemeOn = localStorage.getItem("amDayTheme") !== "off"; } catch (e) {}
 const curSong = () => all().find(x => x.id === curId) || (tmpSong && tmpSong.id === curId ? tmpSong : null);
 const hash = str => { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 function coverHue(url) {
@@ -575,12 +579,13 @@ function coverHue(url) {
 async function applyTheme(s) {
   const key = themeOn && s ? s.id : "", st = document.documentElement.style;
   if (key === themeFor) return; themeFor = key;
-  if (!key) { st.removeProperty("--accent"); st.removeProperty("--g1"); return; }
+  if (!key) { songThemed = false; dayThemeKey = null; applyDayTheme(); return; }
   const hs = await coverHue(s.cover);
   if (themeFor !== key) return;
   const h = hs ? hs[0] : hash(s.title + s.artist) % 360, sat = Math.max(0.45, Math.min(0.9, hs ? hs[1] : 0.6));
   st.setProperty("--accent", `hsl(${Math.round(h)} ${Math.round(sat * 100)}% 72%)`);
   st.setProperty("--g1", `hsl(${Math.round(h)} ${Math.round(sat * 55)}% 24%)`);
+  songThemed = true;
 }
 $("themeauto").onchange = () => { themeOn = $("themeauto").checked; try { localStorage.setItem("amTheme", themeOn ? "on" : "off"); } catch (e) {} themeFor = null; applyTheme(curSong()); };
 
@@ -755,6 +760,7 @@ const dayRange = x => x.end > x.start ? `${x.start.getDate()}–${trDate(x.end)}
 function renderBanner() {
   const b = $("daybanner"), today = midnight(new Date());
   const x = upcomingDays().find(d => (d.start - today) / 864e5 <= 2);
+  $("c-days").classList.toggle("hasday", !!x && x.start <= today);
   let hide = !x, key = "";
   if (x) { key = x.n + "|" + x.start.toDateString(); try { hide = localStorage.getItem("amDay") === key; } catch (e) {} }
   b.classList.toggle("hidden", hide);
@@ -781,6 +787,28 @@ function renderDays() {
 }
 $("dayx").onclick = () => { try { localStorage.setItem("amDay", $("daybanner").dataset.key); } catch (e) {} $("daybanner").classList.add("hidden"); };
 $("daymusic").onclick = () => dayMusic($("daybanner").dataset.q);
+function setThemeFromColor(hex) {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), dl = mx - mn;
+  let h = 0; if (dl) h = (mx === r ? ((g - b) / dl + (g < b ? 6 : 0)) : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4) * 60;
+  const sat = Math.max(0.45, Math.min(0.9, dl / (mx || 1))), st = document.documentElement.style;
+  st.setProperty("--accent", `hsl(${Math.round(h)} ${Math.round(sat * 100)}% 72%)`);
+  st.setProperty("--g1", `hsl(${Math.round(h)} ${Math.round(sat * 55)}% 24%)`);
+}
+// On a special day the app's colours follow that day, unless a song's own colours are showing
+function applyDayTheme() {
+  if (songThemed) return;
+  const today = midnight(new Date()), st = document.documentElement.style;
+  const x = dayThemeOn ? upcomingDays().find(d => d.start <= today && d.end >= today) : null;
+  const key = x ? x.n + x.start.toDateString() : "";
+  if (key === dayThemeKey) return;
+  dayThemeKey = key;
+  if (!x) { st.removeProperty("--accent"); st.removeProperty("--g1"); return; }
+  setThemeFromColor(x.c);
+}
+$("daytheme").onchange = () => { dayThemeOn = $("daytheme").checked; try { localStorage.setItem("amDayTheme", dayThemeOn ? "on" : "off"); } catch (e) {} dayThemeKey = null; applyDayTheme(); };
+setInterval(applyDayTheme, 60000);
+applyDayTheme();
 renderBanner();
 
 /* ---------- Users & YouTube ---------- */
