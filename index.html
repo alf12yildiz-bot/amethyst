@@ -74,7 +74,10 @@ a.btn{display:inline-block;text-decoration:none}
 #mid{display:flex;flex-direction:column;align-items:center;gap:6px}
 #ctl{display:flex;align-items:center;gap:14px}
 .ctl{background:none;border:0;font-size:18px;color:var(--muted);padding:4px 8px}
-.ctl:hover,.ctl.on{color:var(--accent)}
+.ctl.on{color:var(--accent)}
+@media (hover:hover){.ctl:hover{color:var(--accent)}}
+#rep{position:relative}
+#rep[data-mode="one"]::after{content:"1";position:absolute;right:1px;top:-2px;font-size:10px;font-weight:700;color:var(--accent)}
 #pp{background:var(--text);color:var(--bg);border-radius:50%;width:38px;height:38px;font-size:14px;padding:0}
 #seekrow{display:flex;align-items:center;gap:10px;width:100%;max-width:560px;font-size:12px;color:var(--muted)}
 #seek{flex:1}
@@ -105,6 +108,8 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;flex:none
 body.out{grid-template-columns:1fr;grid-template-rows:60px 1fr}
 body.out #side,body.out #np,body.out #bar,body.out #center{display:none}
 input:focus-visible,select:focus-visible{outline-offset:0}
+#viz{display:block;width:100%;height:90px;margin-top:16px}
+#vizmini{width:40px;height:26px;flex:none}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
 @media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
@@ -206,10 +211,11 @@ input:focus-visible,select:focus-visible{outline-offset:0}
   <div class="cov" id="npc">♪</div>
   <h2 id="npt">Bir şarkı seç</h2>
   <div class="a" id="npa"></div>
+  <canvas id="viz"></canvas>
 </aside>
 
 <footer id="bar">
-  <div id="nowl"><div class="cov" id="bc">♪</div><div style="min-width:0"><div class="t" id="bt">Çalan şarkı yok</div><div class="a" id="ba"></div></div></div>
+  <div id="nowl"><div class="cov" id="bc">♪</div><div style="min-width:0;flex:1"><div class="t" id="bt">Çalan şarkı yok</div><div class="a" id="ba"></div></div><canvas id="vizmini"></canvas></div>
   <div id="mid">
     <div id="ctl">
       <button class="ctl" id="shuf" aria-label="Karıştır">⤮</button>
@@ -242,7 +248,7 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect, getRedirectResult, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, getDoc, arrayUnion, arrayRemove, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -263,7 +269,9 @@ const $ = id => document.getElementById(id);
 const audio = $("audio");
 const webOnly = !window.AmethystApp && !/iPhone|iPad|iPod/i.test(navigator.userAgent);
 $("apk2").classList.toggle("hidden", !webOnly);
-if (window.AmethystApp) $("google").classList.add("hidden"); // Google blocks sign-in inside app web views
+// The Android app signs in with Google natively and passes the ID token here
+window.amethystGoogle = async t => { try { await signInWithCredential(auth, GoogleAuthProvider.credential(t)); } catch (e) { authErr(e); } };
+window.amethystGoogleError = m => say("authmsg", m, true);
 let pub = [], mine = [], unsubs = [], view = [], queue = [], curId = null, chip = "all", shuffle = false;
 let likes = new Set(), friends = new Set(), pls = [], people = [], menuId = null, ptimer, inv = [], outg = new Set();
 let isAdmin = false, reports = [], hiddenSongs = [];
@@ -290,7 +298,10 @@ const authErr = e => say("authmsg", e.message.replace("Firebase: ", ""), true);
 $("login").onclick = () => signInWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
 $("signup").onclick = () => createUserWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
 $("google").onclick = async () => {
-  if (window.AmethystApp) return say("authmsg", "Google ile giriş uygulamanın içinde çalışmaz. E-posta ve şifre ile giriş yap.", true);
+  if (window.AmethystApp) {
+    if (typeof window.AmethystApp.googleSignIn !== "function") return say("authmsg", "Google girişi için Android uygulamasını güncelle. Şimdilik e-posta ile giriş yapabilirsin.", true);
+    say("authmsg", "Google açılıyor…"); window.AmethystApp.googleSignIn(); return;
+  }
   const gp = new GoogleAuthProvider();
   try { await signInWithPopup(auth, gp); }
   catch (e) {
@@ -601,6 +612,61 @@ function renderMod() {
   });
 }
 
+/* ---------- Music visualizer (equalizer bars) ---------- */
+// If the browser cannot read the sound (YouTube, some external hosts), the bars move on their own while music plays.
+audio.addEventListener("error", () => {
+  if (audio.crossOrigin) { audio.crossOrigin = null; audio.src = audio.currentSrc || audio.src; audio.play().catch(() => {}); }
+});
+let actx, an, srcNode, lastSrc = "", freq, vizRaf = 0, vizColor = "#a97bff", vizColorAt = 0;
+const vizCur = {};
+function attachAnalyser() {
+  try {
+    if (!audio.captureStream || audio.src === lastSrc) return;
+    lastSrc = audio.src;
+    if (!actx) {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      an = actx.createAnalyser(); an.fftSize = 128; an.smoothingTimeConstant = 0.7;
+      const mute = actx.createGain(); mute.gain.value = 0; an.connect(mute); mute.connect(actx.destination); // silent: only keeps the analyser running
+      freq = new Uint8Array(an.frequencyBinCount);
+    }
+    if (actx.state === "suspended") actx.resume();
+    if (srcNode) { srcNode.disconnect(); srcNode = null; }
+    const st = audio.captureStream();
+    if (st.getAudioTracks().length) { srcNode = actx.createMediaStreamSource(st); srcNode.connect(an); }
+  } catch (e) { srcNode = null; }
+}
+const startViz = () => { if (!vizRaf) vizRaf = requestAnimationFrame(vizLoop); };
+function vizLoop(now) {
+  vizRaf = 0;
+  if (document.hidden) return;
+  const playing = ytOn ? !!(yp && yp.getPlayerState && yp.getPlayerState() === 1) : !audio.paused;
+  let real = false;
+  if (playing && !ytOn && srcNode) { an.getByteFrequencyData(freq); real = freq.some(v => v > 0); }
+  if (now - vizColorAt > 1000) { vizColor = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || vizColor; vizColorAt = now; }
+  const t = now / 1000; let moving = false;
+  [[$("viz"), 28], [$("vizmini"), 5]].forEach(([cv, n]) => {
+    if (!cv || !cv.offsetWidth) return;
+    const dpr = window.devicePixelRatio || 1, w = Math.round(cv.offsetWidth * dpr), h = Math.round(cv.offsetHeight * dpr);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const c = cv.getContext("2d"); c.clearRect(0, 0, w, h); c.fillStyle = vizColor;
+    const gap = w / n * 0.3, bw = (w - gap * (n - 1)) / n, cur = vizCur[n] || (vizCur[n] = new Array(n).fill(0.04));
+    for (let i = 0; i < n; i++) {
+      let target = 0.04;
+      if (playing) target = real ? Math.pow(freq[Math.min(47, Math.floor(i * 48 / n))] / 255, 1.2)
+        : 0.2 + 0.6 * Math.abs(Math.sin(t * (1.6 + 0.43 * i) + i * 1.7)) * (0.65 + 0.35 * Math.sin(t * 0.8 + i));
+      cur[i] += (target - cur[i]) * 0.3;
+      if (Math.abs(target - cur[i]) > 0.01) moving = true;
+      const bh = Math.max(bw, cur[i] * h);
+      c.beginPath(); if (c.roundRect) c.roundRect(i * (bw + gap), h - bh, bw, bh, bw / 2); else c.rect(i * (bw + gap), h - bh, bw, bh); c.fill();
+    }
+  });
+  if (playing || moving) vizRaf = requestAnimationFrame(vizLoop);
+}
+audio.addEventListener("playing", attachAnalyser);
+["play", "pause", "playing"].forEach(ev => audio.addEventListener(ev, startViz));
+document.addEventListener("visibilitychange", startViz);
+setInterval(startViz, 500);
+
 /* ---------- Users & YouTube ---------- */
 async function loadUsers() {
   try { const r = await getDocs(query(collection(db, "users"), limit(60))); usersAll = r.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== auth.currentUser.uid); } catch (e) { fail(e); }
@@ -667,7 +733,7 @@ function playYt(s) {
   window.onYouTubeIframeAPIReady = initYt;
   if (!document.getElementById("ytapi")) { const t = document.createElement("script"); t.id = "ytapi"; t.src = "https://www.youtube.com/iframe_api"; document.head.append(t); }
 }
-function initYt() { yp = new YT.Player("ytf", { videoId: ytPending, playerVars: { autoplay: 1, playsinline: 1 }, events: { onReady: e => e.target.setVolume($("vol").value * 100), onStateChange: e => { $("pp").textContent = e.data === 1 ? "❚❚" : "▶"; if (e.data === 0) { if (audio.loop) { yp.seekTo(0); yp.playVideo(); } else step(1); } } } }); }
+function initYt() { yp = new YT.Player("ytf", { videoId: ytPending, playerVars: { autoplay: 1, playsinline: 1 }, events: { onReady: e => e.target.setVolume($("vol").value * 100), onStateChange: e => { $("pp").textContent = e.data === 1 ? "❚❚" : "▶"; if (e.data === 0) { if (repeat === "one") { yp.seekTo(0); yp.playVideo(); } else autoNext(); } } } }); }
 
 /* ---------- Player ---------- */
 /* Lock-screen / notification controls and background playback hints */
@@ -695,7 +761,7 @@ window.amethystCmd = c => {
   else if (c === "prev") step(-1);
 };
 ["play", "pause"].forEach(ev => audio.addEventListener(ev, nativeState));
-function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); ytShow(false); audio.src = s.url; audio.play().catch(() => {}); setMedia(s); } renderAll(); }
+function playId(id, list) { queue = list; const s = queue.find(x => x.id === id); if (!s) return; curId = id; if (s.yt) playYt(s); else { ytOn = false; if (yp && yp.pauseVideo) yp.pauseVideo(); ytShow(false); audio.crossOrigin = /res\.cloudinary\.com/.test(s.url) ? "anonymous" : null; audio.src = s.url; audio.play().catch(() => {}); setMedia(s); } renderAll(); }
 function step(d) {
   if (!queue.length) return;
   let i = queue.findIndex(x => x.id === curId);
@@ -707,13 +773,30 @@ $("pp").onclick = () => { if (!curId) return view.length && playId(view[0].id, v
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
 $("shuf").onclick = e => { shuffle = !shuffle; e.currentTarget.classList.toggle("on", shuffle); };
-$("rep").onclick = e => { audio.loop = !audio.loop; e.currentTarget.classList.toggle("on", audio.loop); };
+let repeat = "off";
+try { repeat = localStorage.getItem("amRepeat") || "off"; } catch (e) {}
+const repLabels = { off: "Tekrar: kapalı", all: "Tekrar: tüm liste", one: "Tekrar: tek şarkı" };
+function setRepeat(m) {
+  repeat = m; audio.loop = m === "one";
+  const b = $("rep"); b.dataset.mode = m; b.classList.toggle("on", m !== "off");
+  b.setAttribute("aria-label", repLabels[m]); b.title = repLabels[m];
+  try { localStorage.setItem("amRepeat", m); } catch (e) {}
+}
+$("rep").onclick = () => setRepeat(repeat === "off" ? "all" : repeat === "all" ? "one" : "off");
+setRepeat(repeat);
+// When a song ends by itself: go on, or stop at the end of the list if repeat is off
+function autoNext() {
+  if (!queue.length) return;
+  const i = queue.findIndex(x => x.id === curId);
+  if (repeat === "off" && !shuffle && i === queue.length - 1) return;
+  step(1);
+}
 $("vol").oninput = e => { audio.volume = e.target.value; if (yp && yp.setVolume) yp.setVolume(e.target.value * 100); };
 audio.volume = 0.8;
 $("seek").oninput = e => { if (ytOn && yp && yp.getDuration) return yp.seekTo(e.target.value / 100 * yp.getDuration(), true); if (isFinite(audio.duration)) audio.currentTime = e.target.value / 100 * audio.duration; };
 audio.ontimeupdate = () => { if (isFinite(audio.duration)) $("seek").value = audio.currentTime / audio.duration * 100; $("t1").textContent = fmt(audio.currentTime); $("t2").textContent = fmt(audio.duration); };
 audio.onplay = audio.onpause = () => { $("pp").textContent = audio.paused ? "▶" : "❚❚"; };
-audio.onended = () => step(1);
+audio.onended = autoNext;
 setInterval(() => { if (!ytOn || !yp || !yp.getDuration) return; const d = yp.getDuration(), c = yp.getCurrentTime(); if (d > 0) { $("seek").value = c / d * 100; $("t1").textContent = fmt(c); $("t2").textContent = fmt(d); } }, 500);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
