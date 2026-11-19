@@ -54,6 +54,7 @@ a.btn{display:inline-block;text-decoration:none}
 .card{display:block;width:100%;background:transparent;border:0;text-align:left;padding:12px;border-radius:8px}
 .card:hover,.card.on{background:var(--card)}
 .cov{aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#7a3df0,#d9c2ff) center/cover;display:flex;align-items:center;justify-content:center;font:800 40px Mario,Outfit,sans-serif;color:var(--ink)}
+.cov.ph{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%231a0b3a'%3E%3Cellipse cx='20' cy='47' rx='9' ry='6.8' transform='rotate(-22 20 47)'/%3E%3Cellipse cx='44' cy='41' rx='9' ry='6.8' transform='rotate(-22 44 41)'/%3E%3Crect x='26.5' y='14' width='4' height='33' rx='2'/%3E%3Crect x='50.5' y='8' width='4' height='33' rx='2'/%3E%3Cpath d='M26.5 14L54.5 8V16L26.5 22Z' stroke='%231a0b3a' stroke-width='2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") center/52% no-repeat,linear-gradient(135deg,#7a3df0,#d9c2ff)}
 .card .cov{width:100%;height:auto;aspect-ratio:auto;padding:50% 0;line-height:0;margin-bottom:10px}
 .cw,.card{min-width:0}
 .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -117,12 +118,16 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 #c-days{position:relative;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);font-size:20px;flex:none}
 #c-days.on{background:var(--accent)}
 #c-days.hasday::after{content:"";position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+#upbtn{display:none;width:44px;height:44px;border-radius:50%;border:0;flex:none;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%23f3e9ff'%3E%3Cellipse cx='20' cy='47' rx='9' ry='6.8' transform='rotate(-22 20 47)'/%3E%3Cellipse cx='44' cy='41' rx='9' ry='6.8' transform='rotate(-22 44 41)'/%3E%3Crect x='26.5' y='14' width='4' height='33' rx='2'/%3E%3Crect x='50.5' y='8' width='4' height='33' rx='2'/%3E%3Cpath d='M26.5 14L54.5 8V16L26.5 22Z' stroke='%23f3e9ff' stroke-width='2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") center/52% no-repeat}
+#upx,#upback{display:none}
+#toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:#2d1d52;color:var(--text);padding:10px 16px;border-radius:999px;z-index:80;max-width:90vw;font-size:14px;box-shadow:0 8px 30px #000a}
+#toast.err{color:#ff9db8}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
 @media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
 @media (max-width:760px){
  body{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto;padding:6px}
- #top{flex-wrap:wrap;height:auto;padding:4px 4px 0;gap:8px}
+ #top{flex-wrap:wrap;height:auto;padding:4px 10px 8px;margin:0 -6px;gap:8px;position:sticky;top:0;z-index:20;background:var(--bg)}
  #brand{width:auto;flex:1;font-size:22px}
  #center{order:3;flex:1 1 100%;justify-content:flex-start}
  #home{width:44px;height:44px;flex:none}
@@ -132,10 +137,18 @@ input:focus-visible,select:focus-visible{outline-offset:0}
  #nowl .cov{width:44px;height:44px;font-size:18px}
  .ctl{padding:2px 8px}
  #vol{display:none}
+ #upbtn{display:block}
+ #upbox{display:none}
+ #upx{display:inline;font-size:18px}
+ body.upopen{overflow:hidden}
+ body.upopen #upback{display:block;position:fixed;inset:0;background:#000b;z-index:55}
+ body.upopen #upbox{display:block;position:fixed;left:12px;right:12px;top:6vh;max-height:86vh;overflow:auto;margin:0;z-index:60;box-shadow:0 20px 60px #000}
 }
 </style>
 </head>
 <body class="out">
+<div id="upback"></div>
+<div id="toast" class="hidden"></div>
 <header id="top">
   <div id="brand">Amethyst</div>
   <div id="center">
@@ -143,12 +156,13 @@ input:focus-visible,select:focus-visible{outline-offset:0}
     <input id="q" type="search" placeholder="Ne çalmak istiyorsun?" aria-label="Ara">
   </div>
   <button id="c-days" class="hidden" aria-label="Özel günler" title="Özel günler">🎉</button>
+  <button id="upbtn" class="hidden" aria-label="Şarkı yükle" title="Şarkı yükle"></button>
   <button id="avatar" class="hidden" aria-label="Profil"></button>
 </header>
 
 <aside id="side">
   <div id="upbox" class="box hidden">
-    <h2>Şarkı yükle</h2>
+    <h2>Şarkı yükle <button class="del" id="upx" aria-label="Kapat">✕</button></h2>
     <input type="text" id="title" placeholder="Şarkı adı">
     <input type="text" id="artist" placeholder="Sanatçı">
     <label class="lbl">Ses dosyası<input type="file" id="file" accept="audio/*"></label>
@@ -218,14 +232,14 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 </main>
 
 <aside id="np">
-  <div class="cov" id="npc">♪</div>
+  <div class="cov ph" id="npc"></div>
   <h2 id="npt">Bir şarkı seç</h2>
   <div class="a" id="npa"></div>
   <canvas id="viz"></canvas>
 </aside>
 
 <footer id="bar">
-  <div id="nowl"><div class="cov" id="bc">♪</div><div style="min-width:0;flex:1"><div class="t" id="bt">Çalan şarkı yok</div><div class="a" id="ba"></div></div><canvas id="vizmini"></canvas></div>
+  <div id="nowl"><div class="cov ph" id="bc"></div><div style="min-width:0;flex:1"><div class="t" id="bt">Çalan şarkı yok</div><div class="a" id="ba"></div></div><canvas id="vizmini"></canvas></div>
   <div id="mid">
     <div id="ctl">
       <button class="ctl" id="shuf" aria-label="Karıştır">⤮</button>
@@ -292,9 +306,25 @@ let isAdmin = false, reports = [], hiddenSongs = [];
 let ytSaved = [], usersAll = [], profile = null, tmpSong = null, yp = null, ytOn = false, ytPending = null;
 
 const fmt = s => isFinite(s) ? Math.floor(s/60) + ":" + String(Math.floor(s%60)).padStart(2,"0") : "0:00";
-const say = (id, text, err) => { const e = $(id); e.textContent = text; e.classList.toggle("err", !!err); };
+const say = (id, text, err) => {
+  const e = $(id); e.textContent = text; e.classList.toggle("err", !!err);
+  if (id === "upmsg" && text && getComputedStyle($("upbox")).display === "none") toast(text, err); // upload box is hidden on phones
+};
+let toastT;
+function toast(text, err) {
+  const t = $("toast"); t.textContent = text; t.classList.toggle("err", !!err); t.classList.remove("hidden");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.add("hidden"), 3500);
+}
+// Phone: the upload form opens as a popup from the music button in the header
+$("upbtn").onclick = () => { document.body.classList.add("upopen"); history.pushState({ up: 1 }, ""); };
+const closeUp = () => { if (document.body.classList.contains("upopen")) { if (history.state && history.state.up) history.back(); else document.body.classList.remove("upopen"); } };
+$("upx").onclick = closeUp; $("upback").onclick = closeUp;
+window.addEventListener("popstate", () => document.body.classList.remove("upopen"));
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-const setCover = (n, s) => { if (s && s.cover) { n.style.backgroundImage = `url("${s.cover}")`; n.textContent = ""; } else { n.style.backgroundImage = ""; n.textContent = s ? (s.title || "♪")[0].toUpperCase() : "♪"; } };
+const setCover = (n, s) => {
+  if (s && s.cover) { n.style.backgroundImage = `url("${s.cover}")`; n.textContent = ""; n.classList.remove("ph"); }
+  else { n.style.backgroundImage = ""; n.classList.toggle("ph", !s); n.textContent = s ? (s.title || "?")[0].toUpperCase() : ""; }
+};
 const all = () => { const m = new Map(); [...pub, ...mine, ...ytSaved].forEach(s => m.set(s.id, s)); return [...m.values()].sort((a, b) => (b.createdAt?.seconds ?? 1e12) - (a.createdAt?.seconds ?? 1e12)); };
 
 const cloud = (file, kind, onp) => new Promise((ok, no) => {
@@ -333,7 +363,7 @@ function renderAvatar() {
 }
 const subErr = e => say("empty", "Şarkılar yüklenemedi: " + e.message, true);
 onAuthStateChanged(auth, user => {
-  ["app", "upbox", "minebox", "plbox", "invbox", "avatar", "c-days"].forEach(i => $(i).classList.toggle("hidden", !user));
+  ["app", "upbox", "minebox", "plbox", "invbox", "avatar", "c-days", "upbtn"].forEach(i => $(i).classList.toggle("hidden", !user));
   $("auth").classList.toggle("hidden", !!user);
   document.body.classList.toggle("out", !user); spent = 0; lastTick = 0; $("apkbox").classList.toggle("hidden", !!user || !webOnly);
   unsubs.forEach(u => u()); unsubs = []; pub = []; mine = []; likes = new Set(); friends = new Set(); pls = []; people = []; ytSaved = []; inv = []; outg = new Set();
@@ -388,6 +418,7 @@ $("up").onclick = async () => {
     const r = await cloud(f, "video", p => say("upmsg", "Yükleniyor… " + Math.round(p * 100) + "%"));
     await addDoc(collection(db, "songs"), { title, artist, cover, url: r.secure_url, path: r.public_id, visibility: $("vis").value, by: myName(), uid: u.uid, createdAt: serverTimestamp() });
     say("upmsg", "Yüklendi: " + title);
+    setTimeout(closeUp, 1200);
     ["title", "artist", "file", "cover"].forEach(i => $(i).value = ""); $("rights").checked = false;
   } catch (e) { say("upmsg", "Hata: " + e.message, true); }
   $("up").disabled = false;
@@ -663,7 +694,7 @@ function vizLoop(now) {
     if (!cv || !cv.offsetWidth) return;
     const dpr = window.devicePixelRatio || 1, w = Math.round(cv.offsetWidth * dpr), h = Math.round(cv.offsetHeight * dpr);
     if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-    const c = cv.getContext("2d"); c.clearRect(0, 0, w, h); c.fillStyle = vizColor;
+    const c = cv.getContext("2d"); c.clearRect(0, 0, w, h); c.fillStyle = vizColor; c.globalAlpha = playing ? 1 : 0.35;
     const gap = w / n * 0.3, bw = (w - gap * (n - 1)) / n, cur = vizCur[n] || (vizCur[n] = new Array(n).fill(0.04));
     for (let i = 0; i < n; i++) {
       let target = 0.04;
