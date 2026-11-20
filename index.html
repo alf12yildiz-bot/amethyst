@@ -8,6 +8,11 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Amethyst</title>
+<meta name="description" content="Amethyst: müzik yükle, dinle, arkadaşlarınla paylaş.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Amethyst">
+<meta property="og:description" content="Müzik yükle, dinle, arkadaşlarınla paylaş.">
+<meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -122,6 +127,10 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 #upx,#upback{display:none}
 #toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:#2d1d52;color:var(--text);padding:10px 16px;border-radius:999px;z-index:80;max-width:90vw;font-size:14px;box-shadow:0 8px 30px #000a}
 #toast.err{color:#ff9db8}
+#legal{width:min(560px,94vw)}
+#legalb{max-height:60vh;overflow:auto;font-size:14px;color:var(--muted);margin:8px 0 12px}
+#legalb h3{margin:14px 0 4px;color:var(--text);font:600 15px Outfit,sans-serif}
+#legalb p{margin:0 0 6px;line-height:1.5}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
 @media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
@@ -136,7 +145,7 @@ input:focus-visible,select:focus-visible{outline-offset:0}
  #bar{position:sticky;bottom:0;background:var(--bg);grid-template-columns:1fr;padding:6px 8px;gap:2px}
  #nowl .cov{width:44px;height:44px;font-size:18px}
  .ctl{padding:2px 8px}
- #vol{display:none}
+ #vol{width:100%;max-width:560px;justify-self:center}
  #upbtn{display:block}
  /* phone order: songs, playlists, friends, library, player */
  #side{display:contents}
@@ -209,8 +218,10 @@ input:focus-visible,select:focus-visible{outline-offset:0}
       <button class="btn" id="login">Giriş yap</button>
       <button class="btn ghost" id="signup">Hesap oluştur</button>
       <button class="btn ghost" id="google">Google ile devam et</button>
+      <button class="btn ghost" id="forgot">Şifremi unuttum</button>
     </div>
     <div class="msg" id="authmsg"></div>
+    <div class="msg"><button class="del lp">Gizlilik politikası</button> · <button class="del lt">Kullanım şartları</button></div>
   </section>
   <div id="apkbox" class="box hidden">
     <h2>Android uygulaması</h2>
@@ -264,6 +275,7 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 <audio id="audio" preload="none"></audio>
 
 <dialog id="ask"><h2 id="ask-t"></h2><input type="text" id="ask-i" class="hidden"><div class="row3"><button class="btn" id="ask-ok">Tamam</button><button class="btn ghost" id="ask-no">İptal</button></div></dialog>
+<dialog id="legal"><h2 id="legalt"></h2><div id="legalb"></div><button class="btn" id="legalx">Kapat</button></dialog>
 <dialog id="smenu"><div id="mbody"></div><button class="btn ghost" id="mclose" style="margin-top:12px">Kapat</button></dialog>
 
 <dialog id="prof">
@@ -277,11 +289,12 @@ input:focus-visible,select:focus-visible{outline-offset:0}
   <button class="btn" id="psave">Kaydet</button>
   <button class="btn ghost" id="pclose" style="margin-left:6px">Kapat</button>
   <button class="btn ghost" id="out">Çıkış yap</button>
+  <div class="msg"><button class="del lp">Gizlilik politikası</button> · <button class="del lt">Kullanım şartları</button></div>
 </dialog>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect, getRedirectResult, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, sendPasswordResetEmail, signInWithPopup, signInWithCredential, signInWithRedirect, getRedirectResult, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 import { getFirestore, collection, addDoc, deleteDoc, updateDoc, setDoc, getDocs, getDoc, arrayUnion, arrayRemove, increment, doc, query, where, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -349,6 +362,11 @@ const cloud = (file, kind, onp) => new Promise((ok, no) => {
 const authErr = e => say("authmsg", e.message.replace("Firebase: ", ""), true);
 $("login").onclick = () => signInWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
 $("signup").onclick = () => createUserWithEmailAndPassword(auth, $("em").value, $("pw").value).catch(authErr);
+$("forgot").onclick = () => {
+  const em = $("em").value.trim();
+  if (!em) return say("authmsg", "Önce e-posta adresini yaz, sonra Şifremi unuttum'a bas.", true);
+  sendPasswordResetEmail(auth, em).then(() => say("authmsg", "Şifre sıfırlama bağlantısı e-postana gönderildi (gereksiz klasörüne de bak).")).catch(authErr);
+};
 $("google").onclick = async () => {
   if (window.AmethystApp) {
     if (typeof window.AmethystApp.googleSignIn !== "function") return say("authmsg", "Google girişi için Android uygulamasını güncelle. Şimdilik e-posta ile giriş yapabilirsin.", true);
@@ -697,7 +715,7 @@ function vizLoop(now) {
   let real = false;
   if (playing && !ytOn && srcNode) { an.getByteFrequencyData(freq); real = freq.some(v => v > 0); }
   if (now - vizColorAt > 1000) { vizColor = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || vizColor; vizColorAt = now; }
-  const t = now / 1000; let moving = false;
+  const t = now / 1000, calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; let moving = false;
   [[$("viz"), 28], [$("vizmini"), 5]].forEach(([cv, n]) => {
     if (!cv || !cv.offsetWidth) return;
     const dpr = window.devicePixelRatio || 1, w = Math.round(cv.offsetWidth * dpr), h = Math.round(cv.offsetHeight * dpr);
@@ -706,7 +724,7 @@ function vizLoop(now) {
     const gap = w / n * 0.3, bw = (w - gap * (n - 1)) / n, cur = vizCur[n] || (vizCur[n] = new Array(n).fill(0.04));
     for (let i = 0; i < n; i++) {
       let target = 0.04;
-      if (playing) target = real ? Math.pow(freq[Math.min(47, Math.floor(i * 48 / n))] / 255, 1.2)
+      if (playing) target = calm ? 0.3 : real ? Math.pow(freq[Math.min(47, Math.floor(i * 48 / n))] / 255, 1.2)
         : 0.2 + 0.6 * Math.abs(Math.sin(t * (1.6 + 0.43 * i) + i * 1.7)) * (0.65 + 0.35 * Math.sin(t * 0.8 + i));
       cur[i] += (target - cur[i]) * 0.3;
       if (Math.abs(target - cur[i]) > 0.01) moving = true;
@@ -849,6 +867,36 @@ $("daytheme").onchange = () => { dayThemeOn = $("daytheme").checked; try { local
 setInterval(applyDayTheme, 60000);
 applyDayTheme();
 renderBanner();
+
+/* ---------- Privacy policy and terms (draft texts: have them checked before you rely on them) ---------- */
+const CONTACT_EMAIL = ""; // put your contact e-mail address here
+const LEGAL = {
+  privacy: ["Gizlilik politikası", [
+    ["Hangi verileri topluyoruz", "E-posta adresin, görünen adın, profil resmin, yüklediğin şarkılar ve kapaklar, çalma listelerin, sevdiğin şarkılar, arkadaşlıkların, uygulamada geçirdiğin süre ve gönderdiğin şikayetler. Ayrıca Firebase Analytics ile sayfa görüntüleme ve cihaz bilgisi gibi kullanım istatistikleri toplanır."],
+    ["Neden kullanıyoruz", "Hesabını açmak, müziklerini saklamak ve göstermek, arkadaşlık ve çalma listesi özelliklerini çalıştırmak, kötüye kullanımı denetlemek ve uygulamayı geliştirmek için."],
+    ["Kimlere görünür", "Herkese açık yaptığın şarkılar, görünen adın, profil resmin ve uygulamada geçirdiğin süre giriş yapan diğer kullanıcılara görünür. Gizli şarkıların sadece sana görünür."],
+    ["Hizmet sağlayıcılar", "Veriler Google Firebase (giriş, veritabanı, analiz) ve Cloudinary (dosya depolama) üzerinde tutulur. YouTube videoları YouTube'un gömülü oynatıcısıyla çalar, YouTube kendi gizlilik politikasına göre veri toplayabilir. Ücretsiz müzik araması Openverse üzerinden yapılır."],
+    ["Hakların", "6698 sayılı KVKK kapsamında verilerin hakkında bilgi isteme, düzeltme ve silme talep etme hakkın vardır. Hesabının ve verilerinin silinmesi için aşağıdaki adrese yazabilirsin."]
+  ]],
+  terms: ["Kullanım şartları", [
+    ["Yüklediğin içerik", "Yüklediğin şarkıların ve görsellerin haklarına sahip olmalısın (kendi eserin ya da lisansı uygun olmalı). Başkasının telifini ihlal eden içerik yükleme."],
+    ["Yasaklı içerik", "Nefret söylemi, taciz, çocukları istismar eden, yasa dışı ya da başkalarına zarar veren içerik yasaktır."],
+    ["Denetim", "Şikayet üzerine ya da kendiliğinden içerikleri gizleyebilir veya silebiliriz. Tekrarlanan ihlallerde hesabın kısıtlanabilir."],
+    ["Telif bildirimi", "Bir içeriğin hakkını taşıyorsan ve izinsiz yüklendiğini düşünüyorsan aşağıdaki adrese yaz, içeriği inceleyip kaldırırız."],
+    ["Üçüncü taraf içerik", "YouTube ve Openverse içerikleri kendi sahiplerinin şartlarına ve lisanslarına tabidir. Creative Commons şarkılarda sanatçı bilgisi gösterilir."],
+    ["Sorumluluk", "Hizmet olduğu gibi sunulur, kesintisiz çalışacağı garanti edilmez. Bu şartlar zaman zaman güncellenebilir."]
+  ]]
+};
+function showLegal(k) {
+  const [title, parts] = LEGAL[k], b = $("legalb");
+  $("legalt").textContent = title; b.innerHTML = "";
+  parts.forEach(([h, t]) => { b.append(el("h3", null, h), el("p", null, t)); });
+  b.append(el("p", null, "İletişim: " + (CONTACT_EMAIL || "uygulamanın sahibi (iletişim adresi henüz eklenmedi)")));
+  $("legal").showModal();
+}
+document.querySelectorAll(".lp").forEach(x => { x.onclick = () => showLegal("privacy"); });
+document.querySelectorAll(".lt").forEach(x => { x.onclick = () => showLegal("terms"); });
+$("legalx").onclick = () => $("legal").close();
 
 /* ---------- Users & YouTube ---------- */
 async function loadUsers() {
