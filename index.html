@@ -138,6 +138,14 @@ input:focus-visible,select:focus-visible{outline-offset:0}
  .ctl{padding:2px 8px}
  #vol{display:none}
  #upbtn{display:block}
+ /* phone order: songs, playlists, friends, library, player */
+ #side{display:contents}
+ #main{order:1}
+ #plbox{order:2}
+ #invbox{order:3}
+ #minebox{order:4}
+ #bar{order:5}
+ body #plbox,body #invbox,body #minebox{background:var(--panel);border-radius:12px;padding:16px;margin:8px 0 0}
  #upbox{display:none}
  #upx{display:inline;font-size:18px}
  body.upopen{overflow:hidden}
