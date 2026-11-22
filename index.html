@@ -131,6 +131,10 @@ input:focus-visible,select:focus-visible{outline-offset:0}
 #legalb{max-height:60vh;overflow:auto;font-size:14px;color:var(--muted);margin:8px 0 12px}
 #legalb h3{margin:14px 0 4px;color:var(--text);font:600 15px Outfit,sans-serif}
 #legalb p{margin:0 0 6px;line-height:1.5}
+#ytres .mrow,#jmres .mrow{display:grid;grid-template-columns:44px 1fr;gap:2px 10px;align-items:center}
+#ytres .mrow .cov,#jmres .mrow .cov{grid-row:1 / 3}
+#ytres .t,#jmres .t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.acts{grid-column:2;display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 4px}
 #pfr{margin:0 0 16px}#ytbox{margin-bottom:12px}
 @media (max-width:760px){#ytp{bottom:150px;left:8px;right:8px;width:auto;height:200px}}
 @media (max-width:1100px){body{grid-template-columns:300px 1fr}#np{display:none}}
@@ -239,12 +243,12 @@ input:focus-visible,select:focus-visible{outline-offset:0}
       <button class="chip" id="c-jm">♫ Ücretsiz müzik</button>
       <button class="chip hidden" id="c-mod">🛡 Moderasyon</button>
     </div>
+    <h1 id="ttl">Herkese açık şarkılar</h1><button class="btn hidden" id="pfr"></button>
     <div id="people" class="hidden"><h1>Hesaplar</h1><div id="plist"></div></div>
     <div id="ytbox" class="hidden"><div class="note">⚠ Yasal sebeplerden dolayı YouTube müzikleri arka planda çalışmayacaktır.</div><div class="row2"><input type="text" id="ytq" placeholder="YouTube'da şarkı ara"><button class="btn" id="ytgo">Ara</button></div><div class="msg" id="ytmsg"></div><div id="ytres"></div></div>
     <div id="daysbox" class="hidden"><div id="dayslist"></div><div class="msg" id="daysnote"></div></div>
     <div id="modbox" class="hidden"><div class="note">Moderasyon paneli: sadece yöneticiler görür.</div><div class="sub">Açık şikayetler</div><div id="modrep"></div><div class="msg" id="modempty">Açık şikayet yok.</div><div class="sub">Gizlenen şarkılar</div><div id="modhid"></div></div>
     <div id="jmbox" class="hidden"><div class="note">Openverse üzerinden bulunan Creative Commons lisanslı müzikler (Jamendo, Wikimedia gibi kaynaklardan). Bu şarkılar arka planda da çalar.</div><div class="row2"><input type="text" id="jmq" placeholder="Ücretsiz müzik ara"><button class="btn" id="jmgo">Ara</button></div><div class="msg" id="jmmsg"></div><div id="jmres"></div></div>
-    <h1 id="ttl">Herkese açık şarkılar</h1><button class="btn hidden" id="pfr"></button>
     <div id="grid"></div>
     <div class="msg" id="empty">Şarkı bulunamadı.</div>
   </section>
@@ -602,7 +606,7 @@ function renderMenu() {
   const mk = (t, f) => { const x = el("button", "btn ghost", t); x.onclick = f; b.append(x); };
   mk(likes.has(s.id) ? "♥ Sevilenlerden çıkar" : "♡ Sevilenlere ekle", () => ensure(s).then(() => toggleLike(s.id)).catch(fail));
   if (s.uid !== me && !s.ext) mk("Profilini aç: @" + by, () => { $("smenu").close(); openProfile({ id: s.uid, name: by }); });
-  if (s.uid !== me) mk(friendAct(s.uid) + ": @" + by, () => toggleFriend(s.uid, by));
+  if (s.uid !== me && !s.ext) mk(friendAct(s.uid) + ": @" + by, () => toggleFriend(s.uid, by));
   if (s.uid !== me && !s.ext) mk("Şikayet et", () => { $("smenu").close(); reportSong(s); });
   if (s.yt) mk("YouTube'da aç", () => openYt(s.yt));
   b.append(el("div", "lbl", "Çalma listesine ekle"));
@@ -914,7 +918,7 @@ async function ytSearch() {
     const r = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=" + encodeURIComponent(t) + "&key=" + YT_KEY), j = await r.json();
     if (!r.ok) throw new Error(j.error?.message || r.status);
     say("ytmsg", j.items.length ? "" : "Sonuç yok.");
-    renderYt(j.items.map(i => ({ id: "yt:" + i.id.videoId, yt: i.id.videoId, title: dec(i.snippet.title), artist: dec(i.snippet.channelTitle), cover: i.snippet.thumbnails.medium.url, by: "YouTube" })));
+    renderYt(j.items.map(i => ({ id: "yt:" + i.id.videoId, yt: i.id.videoId, ext: true, title: dec(i.snippet.title), artist: dec(i.snippet.channelTitle), cover: i.snippet.thumbnails.medium.url, by: "YouTube" })));
   } catch (e) { say("ytmsg", "Hata: " + e.message, true); }
 }
 function renderYt(items) {
@@ -926,7 +930,7 @@ function renderYt(items) {
     pl.onclick = () => { tmpSong = s; queue = [s]; curId = s.id; playYt(s); renderAll(); };
     ad.onclick = () => { tmpSong = s; openMenu(s.id); };
     const op = el("button", "badge", "↗"); op.title = "YouTube'da aç"; op.setAttribute("aria-label", "YouTube'da aç"); op.onclick = () => openYt(s.yt);
-    r.append(cv, info, pl, ad, op); box.append(r);
+    const acts = el("div", "acts"); acts.append(pl, ad, op); r.append(cv, info, acts); box.append(r);
   });
 }
 async function jmSearch() {
@@ -949,7 +953,7 @@ function renderJm(items) {
     const pl = el("button", "badge", "▶ Çal"), ad = el("button", "badge public", "+ Ekle");
     pl.onclick = () => { tmpSong = s; playId(s.id, items); };
     ad.onclick = () => { tmpSong = s; openMenu(s.id); };
-    r.append(cv, info, pl, ad); box.append(r);
+    const acts = el("div", "acts"); acts.append(pl, ad); r.append(cv, info, acts); box.append(r);
   });
 }
 $("jmgo").onclick = jmSearch; $("jmq").onkeydown = e => { if (e.key === "Enter") jmSearch(); };
